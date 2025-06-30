@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "@asyncapi/cli": "^3.1.1"
+  },
+  "dependencies": {
+    "@asyncapi/studio": "^1.0.1"
+  }
+}

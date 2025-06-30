@@ -1,0 +1,109 @@
+asyncapi: 3.0.0
+
+info:
+  title: DATEV Personal - Domain Mandate Events
+  version: 1.0.0
+  description: Events published by Domain Mandate of DATEV Personal
+
+channels:
+  clientChanged:
+    address: <stage>.default.hr.personal.client-changed
+    description: Changed event for a client
+    messages:
+      clientChanged:
+        $ref: '#/components/messages/clientChanged'
+
+components:
+  messages:
+    clientChanged:
+      contentType: 'application/json'
+      description: Changed event including current data for a client
+      payload:
+        $ref: "#/components/schemas/ClientChanged"
+
+  schemas:
+    ClientChanged:
+      type: object
+      required:
+        - type
+        - specversion
+        - source
+        - id
+        - time
+        - hrtenantid
+        - datacontenttype
+        - data
+      properties:
+        type:
+          type: string
+          description: The type of data this event contains. Value is always `datev-personal-client-changed`.
+          enum:
+            - datev-personal-client-changed
+        specversion:
+          type: string
+          description: The event schema version used.
+        source:
+          type: string
+          description: The producer of the event. Value is always `/hr-domain-mandate`.
+          enum:
+            - /hr-domain-mandate
+        id:
+          type: string
+          format: uuid
+          description: Unique ID of the event.
+        time:
+          type: string
+          format: timestamp
+          description: Timestamp at which the event was produced.
+        hrtenantid:
+          type: string
+          format: uuid
+          description: Unique ID representing the affected tenant in DATEV Personal.
+        datacontenttype:
+          type: string
+          description: Content type of the data field (always application/json).
+          enum:
+            - application/json
+        data:
+          type: object
+          description: Information necessary for processing event
+          properties:
+            current_accounting_month:
+              description: |
+                Current accounting month (Erfassungsmonat). 
+                Could be null, if no information from payroll products is available.
+              type: string
+              pattern: '^\d{4}-\d{2}$'
+            salary_types:
+              type: array
+              minItems: 0
+              items:
+                type: object
+                required:
+                  - id
+                  - number
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  number:
+                    type: number
+                    format: int32
+                  unit:
+                    type: string
+                    description: |
+                      Possible values for LuG client: null, hours, days, weeks, months, euro, kilometers, piece, special_handling
+                      Possible values for RZ-Lohn client: null, hours, days, euro, kilometers
+                  name:
+                    type: string
+                  custom_name:
+                    type: string
+                  tags:
+                    type: array
+                    minItems: 0
+                    items:
+                      type: string
+                      enum:
+                        - MONATSDATEN
+                        - AN_ABWESENHEITEN
+                        - ENTLOHNUNG

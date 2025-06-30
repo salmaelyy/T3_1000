@@ -1,0 +1,28 @@
+asyncapi: 2.6.0
+info:
+  title: Example System
+  version: 1.0.0
+channels:
+  userSignedUp:
+    description: User signs up and the event is emitted
+    publish:
+      operationId: onUserSignedUp
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+    subscribe:
+      operationId: sendWelcomeEmail
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+components:
+  messages:
+    UserSignedUp:
+      name: UserSignedUp
+      title: Event triggered when a user signs up
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          userId:
+            type: string
+          email:
+            type: string
