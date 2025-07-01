@@ -39,3 +39,27 @@ public class FileProcessor {
         }
     }
 }
+
+
+// TODO:
+// Aktuell funktioniert der Parser nur für eine einzelne AsyncAPI-YAML-Datei bzw. für ein gemeinsames Modell,
+// in dem alle Producer und Consumer im selben Dokument/Channel definiert sind.
+//
+// Damit das Programm auch mit mehreren AsyncAPI-Dateien (z.B. je Service eine Datei) funktioniert,
+// müssen die extrahierten Flows aus allen Dateien gesammelt und zu einem Gesamtdiagramm zusammengeführt werden.
+//
+// Schritte zur Erweiterung:
+// 1. Alle YAML-Dateien im Input-Ordner einlesen und jeweils die Flows extrahieren.
+// 2. Die Flows aus allen Dateien in einer gemeinsamen Datenstruktur (z.B. einer zentralen AsyncAPIData-Instanz) sammeln.
+// 3. Beim Diagramm-Generator alle gesammelten Flows berücksichtigen und daraus ein gemeinsames Mermaid-Diagramm erzeugen.
+// 4. Optional: Duplikate und Self-Calls vermeiden, Teilnehmernamen vereinheitlichen.
+//
+// Hinweis:
+// Siehe auch die Diskussionen in der AsyncAPI-Community und Tools wie Modelina oder Generator-Templates,
+// die ein ähnliches Vorgehen vorschlagen [1][3].
+//
+// Beispiel für die Zusammenführung:
+// - Datei 1: Producer auf Topic A
+// - Datei 2: Consumer auf Topic A
+// => Diagramm zeigt: Producer -> Topic A -> Consumer
+
