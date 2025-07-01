@@ -3,6 +3,16 @@ package com.example.asyncapigenerator;
 import java.util.*;
 
 public class AsyncAPIData {
+    private String version;
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
     public static class Flow {
         public String from;
         public String to;

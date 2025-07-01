@@ -68,7 +68,7 @@ public class DiagramGenerator {
         }
         String result = sb.toString();
         // Wenn der Name schon kurz ist, gib ihn zurück
-        result = result.length() < 5 ? name : result;
+        result = result.length() < 8 ? name : result;
         // Sanitize für Mermaid
         return result.replaceAll("[^a-zA-Z0-9_]", "_");
     }

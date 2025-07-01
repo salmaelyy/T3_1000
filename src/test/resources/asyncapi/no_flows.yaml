@@ -1,0 +1,29 @@
+asyncapi: '2.6.0'
+info:
+  title: Keine Flows API
+  version: '1.0.0'
+channels:
+  channel1:
+    publish:
+      message:
+        $ref: '#/components/messages/MessageA'
+  channel2:
+    subscribe:
+      message:
+        $ref: '#/components/messages/MessageB'
+components:
+  messages:
+    MessageA:
+      name: MessageA
+      payload:
+        type: object
+        properties:
+          foo:
+            type: string
+    MessageB:
+      name: MessageB
+      payload:
+        type: object
+        properties:
+          bar:
+            type: string

@@ -13,6 +13,23 @@ channels:
       clientChanged:
         $ref: '#/components/messages/clientChanged'
 
+operations:
+  sendClientChanged:
+    action: send
+    channel:
+      $ref: "#/channels/clientChanged"
+    message:
+      $ref: "#/channels/clientChanged/messages/clientChanged"
+    operationId: domainMandateService_sendClientChanged
+
+  receiveClientChanged:
+    action: receive
+    channel:
+      $ref: "#/channels/clientChanged"
+    message:
+      $ref: "#/channels/clientChanged/messages/clientChanged"
+    operationId: consumerService_receiveClientChanged
+
 components:
   messages:
     clientChanged:

@@ -1,0 +1,23 @@
+asyncapi: 2.6.0
+info:
+  title: TestAPI
+  version: 1.0.0
+channels:
+  user/signedup:
+    publish:
+      operationId: testPublisher
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+    subscribe:
+      operationId: testSubscriber
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+components:
+  messages:
+    UserSignedUp:
+      name: UserSignedUp
+      payload:
+        type: object
+        properties:
+          userId:
+            type: string
