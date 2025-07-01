@@ -4,18 +4,17 @@ import java.io.File;
 
 public class Main {
     public static void main(String[] args) {
-        if (args.length != 1) {
-            System.out.println("Usage: java -jar generator.jar <asyncapi-folder>");
-            return;
-        }
+        // Standardordner verwenden, wenn kein Argument übergeben wurde
+        String folderPath = "asyncapi"; // relativer Pfad zum Projektverzeichnis
 
-        File inputFolder = new File(args[0]);
+        File inputFolder = new File(folderPath);
         if (!inputFolder.isDirectory()) {
-            System.out.println("Kein Ordner gefunden: " + args[0]);
+            System.out.println("Kein Ordner gefunden: " + folderPath);
             return;
         }
 
         FileProcessor processor = new FileProcessor();
         processor.processFolder(inputFolder);
+
     }
 }

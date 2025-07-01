@@ -1,0 +1,45 @@
+asyncapi: 2.6.0
+info:
+  title: Simple Chat Example
+  version: 1.0.0
+
+channels:
+  aliceToJohn:
+    description: Alice sends a message to John
+    publish:
+      operationId: Alice
+      message:
+        $ref: '#/components/messages/HelloJohn'
+    subscribe:
+      operationId: John
+      message:
+        $ref: '#/components/messages/HelloJohn'
+  johnToAlice:
+    description: John replies to Alice
+    publish:
+      operationId: John
+      message:
+        $ref: '#/components/messages/Great'
+    subscribe:
+      operationId: Alice
+      message:
+        $ref: '#/components/messages/Great'
+
+components:
+  messages:
+    HelloJohn:
+      name: HelloJohn
+      title: Hello John, how are you?
+      payload:
+        type: object
+        properties:
+          text:
+            type: string
+    Great:
+      name: Great
+      title: Great!
+      payload:
+        type: object
+        properties:
+          text:
+            type: string

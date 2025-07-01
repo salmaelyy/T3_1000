@@ -8,6 +8,8 @@ public class FileProcessor {
     private final FileWriterUtil writer = new FileWriterUtil();
 
     public void processFolder(File folder) {
+        System.out.println("Starte Verarbeitung des Ordners: " + folder.getAbsolutePath());
+
         File[] files = folder.listFiles((dir, name) -> name.endsWith(".yaml") || name.endsWith(".yml"));
         if (files == null || files.length == 0) {
             System.out.println("Keine YAML-Dateien gefunden.");
@@ -21,23 +23,25 @@ public class FileProcessor {
 
         for (File yamlFile : files) {
             try {
-                System.out.println("Verarbeite: " + yamlFile.getName());
+                System.out.println("Verarbeite Datei: " + yamlFile.getName());
                 AsyncAPIData data = parser.parseYaml(yamlFile.getAbsolutePath());
                 data.validateFlows();
 
                 String mmd = generator.generateMermaid(data);
 
-                String baseName = yamlFile.getName().replace(".yaml", "").replace(".yml", "");
-
+                // Dateinamen für Output (gleicher Name wie Input, aber andere Endung)
+                String baseName = yamlFile.getName().replaceAll("\\.ya?ml$", "");
                 writer.writeToFile(new File(outputDirMmd, baseName + ".mmd").getPath(), mmd);
                 writer.writeHtmlWithMermaid(new File(outputDirHtml, baseName + ".html").getPath(), mmd);
-                System.out.println("Wurde verarbeitet: " + yamlFile.getName());
+
+                System.out.println("Diagramm für " + yamlFile.getName() + " erfolgreich erzeugt.");
             } catch (Exception e) {
-                System.out.println("Fehler bei Datei: " + yamlFile.getName());
+                System.out.println("Fehler beim Verarbeiten der Datei: " + yamlFile.getName());
                 e.printStackTrace();
             }
         }
     }
+
 }
 
 

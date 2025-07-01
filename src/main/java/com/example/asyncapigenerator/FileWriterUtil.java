@@ -9,10 +9,15 @@ public class FileWriterUtil {
     }
 
     public void writeHtmlWithMermaid(String fileName, String mermaidCode) throws Exception {
-        String html = "<!DOCTYPE html>\n<html>\n<head>\n<script type=\"module\">" +
-                "import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';" +
-                "mermaid.initialize({ startOnLoad: true });</script>\n</head>\n<body>\n<div class=\"mermaid\">\n" +
-                mermaidCode + "\n</div>\n</body>\n</html>";
+        String html = "<!DOCTYPE html>\n" +
+                      "<html>\n" +
+                      "<head>\n" +
+                      "<script type=\"module\">" +
+                      "import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';" +
+                      "mermaid.initialize({ startOnLoad: true });" +
+                      "</script>\n</head>\n<body>\n<div class=\"mermaid\">\n" +
+                      mermaidCode +
+                      "\n</div>\n</body>\n</html>";
         writeToFile(fileName, html);
     }
 }
