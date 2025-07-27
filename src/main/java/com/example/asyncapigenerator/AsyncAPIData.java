@@ -37,7 +37,7 @@ public class AsyncAPIData {
 
     public void validateFlows() {
         if (flows.isEmpty()) {
-            throw new IllegalStateException("Keine Datenflüsse extrahiert");
+            throw new IllegalStateException("KEIN FLOW: Keine gültigen Channels mit publish + subscribe gefunden.");
         }
     }
 }
