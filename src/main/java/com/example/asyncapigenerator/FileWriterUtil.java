@@ -57,82 +57,128 @@ public class FileWriterUtil {
     // HTML mit Umschaltfunktion für Kurz- und Langform
     public void writeHtmlWithMermaidToggle(String fileName, String shortCode, String fullCode) throws Exception {
         String html = """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <title>Mermaid Diagramm</title>
-          <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({ startOnLoad: true });
-          </script>
-          <style>
-          
-                    body {
-                      font-family: sans-serif;
-                      background-color: #f8f8f8;
-                      padding: 20px;
-                    }
-                
-                    .diagram-wrapper {
-                      overflow: auto;
-                      min-width: 1600px;
-                    }
-                
-                    select {
-                      margin-bottom: 20px;
-                      padding: 5px 10px;
-                      font-size: 14px;
-                    }
-                
-                   .mermaid {
-                             visibility: hidden;
-                             position: absolute;
-                             font-size: 12px;
-                             line-height: 1.2;
-                           }
-                
-                           .mermaid.active {
-                             visibility: visible;
-                             position: static;
-                           }
-                
-                  </style>
-        </head>
-        <body>
-          <label for="diagramSelect">Diagramm auswählen:</label>
-          <select id="diagramSelect">
-            <option value="short">Kurzform</option>
-            <option value="full">Langform</option>
-          </select>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Mermaid Diagramm</title>
+      <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
 
-          <div class="diagram-wrapper">
-            <div class="mermaid active" id="diagram-short">
-              %%SHORT%%
-            </div>
-            <div class="mermaid" id="diagram-full">
-              %%FULL%%
-            </div>
-          </div>
+        window.addEventListener("DOMContentLoaded", () => {
+          const toggle = document.getElementById("toggle");
+          const shortDiv = document.getElementById("diagram-short");
+          const fullDiv = document.getElementById("diagram-full");
 
-          <script>
-            const select = document.getElementById("diagramSelect");
-            const shortDiv = document.getElementById("diagram-short");
-            const fullDiv = document.getElementById("diagram-full");
+          async function renderActiveDiagram() {
+            const activeDiv = toggle.checked ? fullDiv : shortDiv;
+            await mermaid.run({ nodes: [activeDiv] });
+          }
 
-            select.addEventListener("change", () => {
-              shortDiv.classList.toggle("active", select.value === "short");
-              fullDiv.classList.toggle("active", select.value === "full");
-            });
-          </script>
-        </body>
-        </html>
-        """;
+          toggle.addEventListener("change", () => {
+            shortDiv.classList.toggle("active", !toggle.checked);
+            fullDiv.classList.toggle("active", toggle.checked);
+            renderActiveDiagram();
+          });
+
+          renderActiveDiagram();
+        });
+      </script>
+      <style>
+        body {
+          font-family: sans-serif;
+          background-color: #f8f8f8;
+          padding: 20px;
+        }
+
+        .diagram-wrapper {
+          overflow: auto;
+          min-width: 1600px;
+        }
+
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 60px;
+          height: 34px;
+          margin-bottom: 20px;
+        }
+
+        .switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0;
+          right: 0; bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 34px;
+        }
+
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 26px; width: 26px;
+          left: 4px; bottom: 4px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+
+        input:checked + .slider {
+          background-color: #4caf50;
+        }
+
+        input:checked + .slider:before {
+          transform: translateX(26px);
+        }
+
+        .label-text {
+          font-size: 14px;
+          margin-left: 10px;
+          vertical-align: middle;
+        }
+                .mermaid {
+                                            visibility: hidden;
+                                            position: absolute;
+                                            font-size: 12px;
+                                            line-height: 1.2;
+                                          }
+                
+                                          .mermaid.active {
+                                            visibility: visible;
+                                            position: static;
+                                          }
+      </style>
+    </head>
+    <body>
+      <label class="switch">
+        <input type="checkbox" id="toggle">
+        <span class="slider"></span>
+      </label>
+      <span class="label-text">Langform anzeigen</span>
+
+      <div class="diagram-wrapper">
+        <div class="mermaid active" id="diagram-short">
+          %%SHORT%%
+        </div>
+        <div class="mermaid" id="diagram-full">
+          %%FULL%%
+        </div>
+      </div>
+    </body>
+    </html>
+    """;
 
         html = html.replace("%%SHORT%%", shortCode);
         html = html.replace("%%FULL%%", fullCode);
 
         writeToFile(fileName, html);
-    }
-}
+    }}
 //TODO: Bei den langformen in der html werden die vierecke nicht mehr angezeigt
