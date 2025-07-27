@@ -9,7 +9,6 @@ import java.util.*;
 
 public class AsyncAPIParser {
 
-
     public AsyncAPIData parseYaml(String filePath) throws Exception {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         JsonNode root = mapper.readTree(new File(filePath));
@@ -19,6 +18,8 @@ public class AsyncAPIParser {
         data.setVersion(version);
         System.out.println("Gefundene AsyncAPI-Version: " + version);
 
+        String pink = "\u001B[35m";
+        String reset = "\u001B[0m";
 
         // AsyncAPI v1.x
         if (version.startsWith("1.")) {
@@ -64,36 +65,22 @@ public class AsyncAPIParser {
                     }
                 }
             }
-            if (!flowFound) {
-                System.out.println("KEIN FLOW: Es gibt keinen Channel, bei dem ein Producer (publish) und ein Consumer (subscribe) dieselbe Message verwenden. "
-                        + "Bitte prüfe, ob mindestens ein Channel sowohl publish als auch subscribe für die gleiche Message hat.");
-            }
 
             System.out.println("Anzahl extrahierter Flows: " + data.getFlows().size());
+
             if (data.getFlows().isEmpty()) {
-                throw new IllegalStateException("KEIN FLOW: Keine Channels in AsyncAPI-Datei gefunden");            }
+                System.out.println(pink + "Keine gültigen Channels mit publish + subscribe gefunden." + reset);
+                throw new IllegalStateException("KEIN FLOW: Keine gültigen Channels mit publish + subscribe gefunden.");
+            }
+
             return data;
         }
 
-        // AsyncAPI v3.x: Operationen prüfen
+        // AsyncAPI v3.x
         if (version.startsWith("3.")) {
-            JsonNode operations = root.path("operations");
-            if (operations.isMissingNode() || !operations.fields().hasNext()) {
-                System.out.println("KEIN FLOW: AsyncAPI v3.x-Datei enthält keine Operationen. "
-                        + "Ohne Operationen (send/receive) können keine Flows extrahiert werden. "
-                        + "Bitte ergänze das Feld 'operations' auf Top-Level.");
-                throw new IllegalStateException("Keine Operationen in AsyncAPI v3.x-Datei gefunden.");
-            }
-
-            // Falls keine Flows entstehen:
-            if (data.getFlows().isEmpty()) {
-                System.out.println("KEIN FLOW: Es wurden zwar Operationen gefunden, aber keine passenden send/receive-Kombinationen für dieselbe Message und denselben Channel.");
-                throw new IllegalStateException("Keine Datenflüsse extrahiert (siehe vorherige Meldung).");
-            }
-            return data;
+            return new AsyncAPIv3Parser().parseYaml(filePath);
         }
 
-        //Andere Versionen
         System.out.println("WARNUNG: Unbekannte AsyncAPI-Version: " + version + ". Es wird kein Flow extrahiert.");
         throw new IllegalStateException("Unbekannte AsyncAPI-Version: " + version);
     }
@@ -102,6 +89,7 @@ public class AsyncAPIParser {
         String operationId, message;
         Producer(String op, String msg) { this.operationId = op; this.message = msg; }
     }
+
     static class Consumer {
         String operationId, message;
         Consumer(String op, String msg) { this.operationId = op; this.message = msg; }
@@ -115,3 +103,4 @@ public class AsyncAPIParser {
         }
     }
 }
+//TODO: maybe metadaten in die diagramme?
