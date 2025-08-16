@@ -14,93 +14,143 @@ public class AsyncAPIParser {
         JsonNode root = mapper.readTree(new File(filePath));
         AsyncAPIData data = new AsyncAPIData();
 
-        String version = root.path("asyncapi").asText();
-        data.setVersion(version);
-        System.out.println("Gefundene AsyncAPI-Version: " + version);
+        if (root.has("info")) {
+            JsonNode info = root.get("info");
+            if (info.has("title"))       data.setTitle(info.get("title").asText());
+            if (info.has("version"))     data.setVersion(info.get("version").asText());
+            if (info.has("description")) data.setDescription(info.get("description").asText());
+        }
 
-        String pink = "\u001B[35m";
-        String reset = "\u001B[0m";
+        String specVersion = root.path("asyncapi").asText();
+        System.out.println("Gefundene AsyncAPI-Spezifikation: " + specVersion);
 
-        // AsyncAPI v1.x
-        if (version.startsWith("1.")) {
+        if (specVersion.startsWith("1.")) {
             System.out.println("WARNUNG: AsyncAPI v1.x wird nicht unterstützt.");
             throw new IllegalStateException("AsyncAPI ab v2.x werden unterstützt.");
         }
 
-        // AsyncAPI v2.x
-        if (version.startsWith("2.")) {
-            List<Producer> producers = new ArrayList<>();
-            List<Consumer> consumers = new ArrayList<>();
-            JsonNode channels = root.path("channels");
-
-            channels.fields().forEachRemaining(entry -> {
-                JsonNode channel = entry.getValue();
-                channel.fieldNames().forEachRemaining(fieldName -> {
-                    if (fieldName.startsWith("publish")) {
-                        JsonNode publishNode = channel.path(fieldName);
-                        String prodOp = publishNode.path("operationId").asText(null);
-                        String msgRef = publishNode.path("message").path("$ref").asText();
-                        if (prodOp != null && msgRef != null && !msgRef.isEmpty()) {
-                            producers.add(new Producer(prodOp, extractMessageName(msgRef)));
-                        }
-                    }
-                    if (fieldName.startsWith("subscribe")) {
-                        JsonNode subscribeNode = channel.path(fieldName);
-                        String consOp = subscribeNode.path("operationId").asText(null);
-                        String msgRef = subscribeNode.path("message").path("$ref").asText();
-                        if (consOp != null && msgRef != null && !msgRef.isEmpty()) {
-                            consumers.add(new Consumer(consOp, extractMessageName(msgRef)));
-                        }
-                    }
-                });
-            });
-
-            boolean flowFound = false;
-            for (Producer p : producers) {
-                for (Consumer c : consumers) {
-                    if (p.message.equals(c.message)) {
-                        data.addFlow(p.operationId, c.operationId, p.message);
-                        System.out.println("  Flow: " + p.operationId + " -> " + c.operationId + " : " + p.message);
-                        flowFound = true;
-                    }
-                }
-            }
-
-            System.out.println("Anzahl extrahierter Flows: " + data.getFlows().size());
-
-            if (data.getFlows().isEmpty()) {
-                System.out.println(pink + "Keine gültigen Channels mit publish + subscribe gefunden." + reset);
-                throw new IllegalStateException("KEIN FLOW: Keine gültigen Channels mit publish + subscribe gefunden.");
-            }
-
-            return data;
-        }
-
-        // AsyncAPI v3.x
-        if (version.startsWith("3.")) {
+        if (specVersion.startsWith("3.")) {
             return new AsyncAPIv3Parser().parseYaml(filePath);
         }
 
-        System.out.println("WARNUNG: Unbekannte AsyncAPI-Version: " + version + ". Es wird kein Flow extrahiert.");
-        throw new IllegalStateException("Unbekannte AsyncAPI-Version: " + version);
+        if (!specVersion.startsWith("2.")) {
+            System.out.println("WARNUNG: Unbekannte AsyncAPI-Spezifikation: " + specVersion);
+            throw new IllegalStateException("Unbekannte AsyncAPI-Version: " + specVersion);
+        }
+
+        JsonNode channels = root.path("channels");
+        List<Producer> producers = new ArrayList<>();
+        List<Consumer> consumers = new ArrayList<>();
+        Map<String, List<Producer>> channelPublishes = new LinkedHashMap<>();
+        Map<String, List<Consumer>> channelSubscribes = new LinkedHashMap<>();
+
+        channels.fields().forEachRemaining(entry -> {
+            String channelName = entry.getKey();
+            JsonNode channel = entry.getValue();
+
+            channel.fieldNames().forEachRemaining(fieldName -> {
+                if (fieldName.startsWith("publish")) {
+                    JsonNode publishNode = channel.path(fieldName);
+                    String opId  = valueOrNull(publishNode.path("operationId"));
+                    String msgRef = valueOrNull(publishNode.path("message").path("$ref"));
+                    String msgName = extractMessageName(msgRef);
+                    msgName = appendKafkaInfo(publishNode, msgName);
+
+                    if (opId != null && msgName != null) {
+                        Producer p = new Producer(opId, msgName, channelName);
+                        producers.add(p);
+                        channelPublishes.computeIfAbsent(channelName, k -> new ArrayList<>()).add(p);
+                    }
+                } else if (fieldName.startsWith("subscribe")) {
+                    JsonNode subscribeNode = channel.path(fieldName);
+                    String opId  = valueOrNull(subscribeNode.path("operationId"));
+                    String msgRef = valueOrNull(subscribeNode.path("message").path("$ref"));
+                    String msgName = extractMessageName(msgRef);
+                    msgName = appendKafkaInfo(subscribeNode, msgName);
+
+                    if (opId != null && msgName != null) {
+                        Consumer c = new Consumer(opId, msgName, channelName);
+                        consumers.add(c);
+                        channelSubscribes.computeIfAbsent(channelName, k -> new ArrayList<>()).add(c);
+                    }
+                }
+            });
+        });
+
+        Set<String> seen = new LinkedHashSet<>();
+
+        for (Producer p : producers) {
+            for (Consumer c : consumers) {
+                if (p.message.equals(c.message)) {
+                    String key = p.operationId + "->" + c.operationId + ":" + p.message;
+                    if (seen.add(key)) {
+                        data.addFlow(p.operationId, c.operationId, p.message);
+                    }
+                }
+            }
+        }
+
+        for (Map.Entry<String, List<Producer>> e : channelPublishes.entrySet()) {
+            String topicNode = "topic:" + e.getKey();
+            for (Producer p : e.getValue()) {
+                if (seen.add(p.operationId + "->" + topicNode + ":" + p.message)) {
+                    data.addFlow(p.operationId, topicNode, p.message);
+                }
+            }
+        }
+        for (Map.Entry<String, List<Consumer>> e : channelSubscribes.entrySet()) {
+            String topicNode = "topic:" + e.getKey();
+            for (Consumer c : e.getValue()) {
+                if (seen.add(topicNode + "->" + c.operationId + ":" + c.message)) {
+                    data.addFlow(topicNode, c.operationId, c.message);
+                }
+            }
+        }
+
+        if (data.getFlows().isEmpty()) {
+            throw new IllegalStateException("KEIN FLOW: Keine publish/subscribe-Informationen gefunden.");
+        }
+
+        return data;
+    }
+
+    private String appendKafkaInfo(JsonNode operationNode, String messageName) {
+        JsonNode kafkaBindings = operationNode.path("bindings").path("kafka");
+        if (!kafkaBindings.isMissingNode()) {
+            String groupId = valueOrNull(kafkaBindings.path("groupId"));
+            String clientId = valueOrNull(kafkaBindings.path("clientId"));
+            StringBuilder sb = new StringBuilder(messageName);
+            boolean hasInfo = false;
+            if (groupId != null) {
+                sb.append(" (groupId=").append(groupId);
+                hasInfo = true;
+            }
+            if (clientId != null) {
+                sb.append(hasInfo ? ", clientId=" : " (clientId=").append(clientId);
+                hasInfo = true;
+            }
+            if (hasInfo) sb.append(")");
+            return sb.toString();
+        }
+        return messageName;
     }
 
     static class Producer {
-        String operationId, message;
-        Producer(String op, String msg) { this.operationId = op; this.message = msg; }
+        String operationId, message, channel;
+        Producer(String op, String msg, String ch) { this.operationId = op; this.message = msg; this.channel = ch; }
     }
-
     static class Consumer {
-        String operationId, message;
-        Consumer(String op, String msg) { this.operationId = op; this.message = msg; }
+        String operationId, message, channel;
+        Consumer(String op, String msg, String ch) { this.operationId = op; this.message = msg; this.channel = ch; }
     }
 
     private String extractMessageName(String messageRef) {
-        if (messageRef.contains("/")) {
-            return messageRef.substring(messageRef.lastIndexOf("/") + 1);
-        } else {
-            return "UnknownMessage";
-        }
+        if (messageRef == null || messageRef.isEmpty()) return null;
+        int i = messageRef.lastIndexOf('/');
+        return i >= 0 ? messageRef.substring(i + 1) : messageRef;
+    }
+
+    private String valueOrNull(JsonNode n) {
+        return (n == null || n.isMissingNode() || n.isNull()) ? null : n.asText(null);
     }
 }
-//TODO: maybe metadaten in die diagramme?
