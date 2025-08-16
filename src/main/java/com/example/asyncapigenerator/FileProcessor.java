@@ -16,8 +16,8 @@ public class FileProcessor {
             return;
         }
 
-        File outputDirMmd = new File("target/generated-sources/output/mmd");
-        File outputDirHtml = new File("target/generated-sources/output/html");
+        File outputDirMmd = new File("generated-sources/mmd");
+        File outputDirHtml = new File("generated-sources/html");
         outputDirMmd.mkdirs();
         outputDirHtml.mkdirs();
 

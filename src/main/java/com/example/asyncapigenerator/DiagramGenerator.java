@@ -73,18 +73,27 @@ public class DiagramGenerator {
 
     private String shortenName(String name) {
         String base = extractCore(name);
+        if (base.isEmpty()) return "N";
+
         String first7 = base.length() > 7 ? base.substring(0, 7) : base;
 
-        String lastUpper = "";
-        for (int i = base.length() - 1; i >= 0; i--) {
+        char firstUpper = Character.toUpperCase(base.charAt(0));
+        char lastUpper = 0;
+        for (int i = base.length() - 1; i >= 1; i--) { // ab Index 1 suchen
             char c = base.charAt(i);
             if (Character.isUpperCase(c)) {
-                lastUpper = String.valueOf(c);
+                lastUpper = c;
                 break;
             }
         }
 
-        return first7 + lastUpper + ".";
+        String suffix = (lastUpper != 0 && lastUpper != firstUpper)
+                ? String.valueOf(lastUpper)
+                : "";
+
+        // Nur Punkt, wenn suffix existiert oder der Name wirklich gekürzt wurde
+        boolean shortened = base.length() > 7 || !suffix.isEmpty();
+        return shortened ? first7 + suffix + "." : first7;
     }
 
     private String extractCore(String raw) {
