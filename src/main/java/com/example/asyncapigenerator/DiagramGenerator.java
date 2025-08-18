@@ -1,12 +1,11 @@
+// src/main/java/com/example/asyncapigenerator/DiagramGenerator.java
 package com.example.asyncapigenerator;
 
 import java.util.*;
 
 public class DiagramGenerator {
 
-    public enum Mode {
-        SHORT_ONLY, FULL_ONLY, BOTH
-    }
+    public enum Mode { SHORT_ONLY, FULL_ONLY, BOTH }
 
     public List<DiagramResult> generateMermaid(AsyncAPIData data) {
         Set<String> participants = new LinkedHashSet<>();
@@ -19,14 +18,12 @@ public class DiagramGenerator {
         Mode mode = participantCount > 5 ? Mode.BOTH : Mode.FULL_ONLY;
 
         List<DiagramResult> results = new ArrayList<>();
-
         if (mode == Mode.FULL_ONLY) {
             results.add(new DiagramResult("full", buildDiagram(data, false)));
-        } else if (mode == Mode.BOTH) {
+        } else {
             results.add(new DiagramResult("short", buildDiagram(data, true)));
             results.add(new DiagramResult("full", buildDiagram(data, false)));
         }
-
         return results;
     }
 
@@ -45,7 +42,6 @@ public class DiagramGenerator {
 
         for (String name : participants) {
             String alias = useShortNames ? shortenName(name) : sanitize(name);
-
             String baseAlias = alias;
             int count = aliasCount.getOrDefault(baseAlias, 0);
             while (nameToAlias.containsValue(alias)) {
@@ -55,7 +51,8 @@ public class DiagramGenerator {
             aliasCount.put(baseAlias, count);
 
             nameToAlias.put(name, alias);
-            sb.append("    participant ").append(alias).append(" as \"").append(alias).append("\"\n");
+            sb.append("    participant ").append(alias)
+                    .append(" as \"").append(alias).append("\"\n"); // Label = Alias (kompakt & sicher)
         }
 
         for (AsyncAPIData.Flow flow : data.getFlows()) {
@@ -74,24 +71,15 @@ public class DiagramGenerator {
     private String shortenName(String name) {
         String base = extractCore(name);
         if (base.isEmpty()) return "N";
-
         String first7 = base.length() > 7 ? base.substring(0, 7) : base;
 
         char firstUpper = Character.toUpperCase(base.charAt(0));
         char lastUpper = 0;
-        for (int i = base.length() - 1; i >= 1; i--) { // ab Index 1 suchen
+        for (int i = base.length() - 1; i >= 1; i--) {
             char c = base.charAt(i);
-            if (Character.isUpperCase(c)) {
-                lastUpper = c;
-                break;
-            }
+            if (Character.isUpperCase(c)) { lastUpper = c; break; }
         }
-
-        String suffix = (lastUpper != 0 && lastUpper != firstUpper)
-                ? String.valueOf(lastUpper)
-                : "";
-
-        // Nur Punkt, wenn suffix existiert oder der Name wirklich gekürzt wurde
+        String suffix = (lastUpper != 0 && lastUpper != firstUpper) ? String.valueOf(lastUpper) : "";
         boolean shortened = base.length() > 7 || !suffix.isEmpty();
         return shortened ? first7 + suffix + "." : first7;
     }
@@ -107,10 +95,6 @@ public class DiagramGenerator {
     public static class DiagramResult {
         public final String mode; // "short" oder "full"
         public final String content;
-
-        public DiagramResult(String mode, String content) {
-            this.mode = mode;
-            this.content = content;
-        }
+        public DiagramResult(String mode, String content) { this.mode = mode; this.content = content; }
     }
 }

@@ -1,16 +1,18 @@
 ### IntelliJ IDEA ###
+.idea/
+*.iml
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
 ### Eclipse ###
-.apt_generated
+.apt_generated/
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
-.sts4-cache
+.sts4-cache/
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
@@ -25,8 +27,41 @@ bin/
 ### VS Code ###
 .vscode/
 
-### Mac OS ###
+### macOS ###
 .DS_Store
 
-# Maven build output
+### Maven ###
 target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+### Logs & Temp ###
+*.log
+*.tmp
+*.swp
+*.swo
+
+### Java ###
+hs_err_pid*
+replay_pid*
+
+### Node / AsyncAPI Generator ###
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn.lock
+.pnpm-debug.log*
+# falls du Generator-Artefakte lokal erzeugst:
+generated-sources/
+generated/
+dist/
+build/
+.tmp/
+.cache/
+
+### Diagramme/Exports (anpassen, wenn du sie versionieren willst) ###
+diagrams/
+*.mmd
+*.svg
+*.png
+*.html

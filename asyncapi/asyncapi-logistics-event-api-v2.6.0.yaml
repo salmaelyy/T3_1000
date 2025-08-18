@@ -1,0 +1,131 @@
+asyncapi: 2.6.0
+info:
+  title: Logistics Event API
+  version: 2.6.0
+  description: Simulation of package lifecycle events
+  contact:
+    name: API Support
+    email: support@example.com
+  externalDocs:
+    description: Find more info here
+    url: https://example.com/docs
+
+servers:
+  mqttBroker:
+    url: mqtt.example.com
+    protocol: mqtt
+    protocolVersion: "5.0"
+    description: MQTT Broker for package tracking
+
+channels:
+  package/received:
+    description: Triggered when a package is received at a warehouse
+    subscribe:
+      operationId: receivePackageReceived
+      summary: Consume package received event
+      tags:
+        - name: package
+      message:
+        $ref: '#/components/messages/PackageReceived'
+
+  package/shipped:
+    description: Event for shipped packages
+    publish:
+      operationId: sendPackageShipped
+      message:
+        $ref: '#/components/messages/PackageShipped'
+
+  delivery/completed:
+    parameters:
+      deliveryId:
+        $ref: '#/components/parameters/DeliveryId'
+    publish:
+      operationId: sendDeliveryCompleted
+      message:
+        $ref: '#/components/messages/DeliveryCompleted'
+
+components:
+  messages:
+    PackageReceived:
+      name: PackageReceived
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Package'
+
+    PackageShipped:
+      name: PackageShipped
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Shipment'
+
+    DeliveryCompleted:
+      name: DeliveryCompleted
+      contentType: application/xml
+      payload:
+        $ref: '#/components/schemas/Delivery'
+
+  schemas:
+    Package:
+      type: object
+      required: [packageId, timestamp]
+      properties:
+        packageId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        location:
+          $ref: '#/components/schemas/Location'
+
+    Shipment:
+      type: object
+      properties:
+        trackingNumber:
+          type: string
+        carrier:
+          type: string
+
+    Delivery:
+      type: object
+      properties:
+        deliveryId:
+          type: string
+        deliveredAt:
+          type: string
+          format: date-time
+
+    Location:
+      type: object
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+
+  parameters:
+    DeliveryId:
+      description: Unique identifier for the delivery
+      schema:
+        type: string
+
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: user
+      name: X-API-Key
+
+security:
+  - apiKey: []
+
+tags:
+  - name: package
+    description: Events related to packages
+  - name: delivery
+    description: Final delivery events
+
+
+      #Es gibt keine direkten Producer→Consumer-Ketten in einem gemeinsamen Channel (klassisches Pub-Sub innerhalb eines Topics).
+      #Stattdessen hast du lose gekoppelte Topics – jeder beschreibt nur einen Schritt im Event-Lifecycle.
+      #Falls wirklich ein End-to-End-Flow sichtbar werden soll (z. B. „Paket verschickt → Lieferung abgeschlossen“), müsstest du aus den einzelnen Topics einen logischen Ablauf rekonstruieren – das steht aber so nicht direkt in der AsyncAPI-Datei.
+
+    #Das, was dein Generator aktuell macht, ist daher Producer → Topic und Topic → Consumer separat zu zeichnen (sogenanntes Topic Bridging Diagramm).

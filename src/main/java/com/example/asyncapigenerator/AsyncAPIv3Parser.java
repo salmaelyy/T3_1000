@@ -1,3 +1,4 @@
+// src/main/java/com/example/asyncapigenerator/AsyncAPIv3Parser.java
 package com.example.asyncapigenerator;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -5,13 +6,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * AsyncAPI v3.x Parser mit Kafka-Bindings-Unterstützung
- * - Liest Metadaten aus info (title, version, description) für Diagramm-Header
- * - Erkennt Kafka groupId/clientId aus bindings.kafka (bei subscribe, publish oder operations)
- * - Fügt diese optional in den Node-Namen ein: "operationId (groupId=..., clientId=...)"
+ * - Liest Metadaten aus info (title, version, description)
+ * - Erkennt Kafka groupId/clientId aus bindings.kafka
+ * - Robust gegen inline message-Definitionen/oneOf
+ * - Vermeidet Doppelflows
  */
 public class AsyncAPIv3Parser {
 
@@ -20,7 +24,7 @@ public class AsyncAPIv3Parser {
         JsonNode root = mapper.readTree(new File(filePath));
         AsyncAPIData data = new AsyncAPIData();
 
-        // >>> Metadaten aus "info"
+        // Metadaten
         if (root.has("info")) {
             JsonNode info = root.get("info");
             if (info.has("title")) data.setTitle(info.get("title").asText());
@@ -28,24 +32,23 @@ public class AsyncAPIv3Parser {
             if (info.has("description")) data.setDescription(info.get("description").asText());
         }
 
-        String specVersion = root.path("asyncapi").asText();
-        System.out.println("Gefundene AsyncAPI-Spezifikation: " + specVersion);
+        // KEIN erneutes „Gefundene AsyncAPI…“ – das macht der Aufrufer schon
 
         List<Operation> sendOps = new ArrayList<>();
         List<Operation> receiveOps = new ArrayList<>();
 
-        // ==== Methode 1: Direkt aus channels lesen ====
+        // (Optional) Legacy-ähnlich: v3-Channels könnten publish/subscribe NICHT mehr haben,
+        // aber wenn doch (gemischte Beispiele), tolerieren wir es:
         JsonNode channels = root.path("channels");
         channels.fields().forEachRemaining(channelEntry -> {
             String channelName = channelEntry.getKey();
             JsonNode channelNode = channelEntry.getValue();
 
-            // subscribe
+            // subscribe (legacy-stil, nicht v3-Standard – aber toleriert)
             JsonNode subscribeOp = channelNode.path("subscribe");
             if (!subscribeOp.isMissingNode()) {
                 String opId = subscribeOp.path("operationId").asText("subscribe_" + channelName);
-                String msgRef = subscribeOp.path("message").path("$ref").asText();
-                String messageName = extractMessageName(msgRef);
+                String messageName = extractMessage(subscribeOp.path("message"));
                 String kafkaInfo = extractKafkaBindingInfo(subscribeOp.path("bindings").path("kafka"));
                 receiveOps.add(new Operation(opId + kafkaInfo, channelName, messageName));
             }
@@ -54,14 +57,13 @@ public class AsyncAPIv3Parser {
             JsonNode publishOp = channelNode.path("publish");
             if (!publishOp.isMissingNode()) {
                 String opId = publishOp.path("operationId").asText("publish_" + channelName);
-                String msgRef = publishOp.path("message").path("$ref").asText();
-                String messageName = extractMessageName(msgRef);
+                String messageName = extractMessage(publishOp.path("message"));
                 String kafkaInfo = extractKafkaBindingInfo(publishOp.path("bindings").path("kafka"));
                 sendOps.add(new Operation(opId + kafkaInfo, channelName, messageName));
             }
         });
 
-        // ==== Methode 2: Aus operations lesen ====
+        // v3-Standard: operations
         JsonNode operations = root.path("operations");
         operations.fields().forEachRemaining(opEntry -> {
             String opId = opEntry.getKey();
@@ -72,9 +74,7 @@ public class AsyncAPIv3Parser {
             if (channelRef.isEmpty()) channelRef = opNode.path("channel").asText();
             String channelName = extractRefName(channelRef);
 
-            String msgRef = opNode.path("message").path("$ref").asText();
-            String messageName = extractMessageName(msgRef);
-
+            String messageName = extractMessage(opNode.path("message"));
             String kafkaInfo = extractKafkaBindingInfo(opNode.path("bindings").path("kafka"));
 
             if ("send".equalsIgnoreCase(action)) {
@@ -84,33 +84,24 @@ public class AsyncAPIv3Parser {
             }
         });
 
-        // ==== Flows erzeugen ====
-        boolean flowFound = false;
+        // Flows erzeugen (dedupliziert via AsyncAPIData.addFlow)
         for (Operation send : sendOps) {
             for (Operation recv : receiveOps) {
-                if (send.channel.equals(recv.channel) && send.message.equals(recv.message)) {
+                if (Objects.equals(send.channel, recv.channel) && Objects.equals(send.message, recv.message)) {
                     data.addFlow(send.operationId, recv.operationId, send.message);
                     System.out.printf("  Flow: %s → %s : %s%n", send.operationId, recv.operationId, send.message);
-                    flowFound = true;
                 }
             }
         }
 
-        if (!flowFound) {
-            System.out.println("KEIN FLOW: Keine passenden send/receive-Operationen für denselben Channel und dieselbe Message gefunden.");
-        }
-
         System.out.println("Anzahl extrahierter Flows: " + data.getFlows().size());
-        if (data.getFlows().isEmpty()) {
-            throw new IllegalStateException("KEIN FLOW: Keine kombinierten send/receive-Operationen in AsyncAPI v3.x-Datei gefunden");
-        }
-
+        data.validateFlows();
         return data;
     }
 
     // ==== Hilfsklassen & Methoden ====
     static class Operation {
-        String operationId, channel, message;
+        final String operationId, channel, message;
         Operation(String op, String ch, String msg) {
             this.operationId = op;
             this.channel = ch;
@@ -118,24 +109,39 @@ public class AsyncAPIv3Parser {
         }
     }
 
-    private String extractMessageName(String ref) {
-        if (ref != null && ref.contains("/")) {
-            return ref.substring(ref.lastIndexOf("/") + 1);
-        } else {
-            return "UnknownMessage";
+    private String extractMessage(JsonNode messageNode) {
+        if (messageNode == null || messageNode.isMissingNode() || messageNode.isNull()) return "UnknownMessage";
+        // $ref
+        String ref = messageNode.path("$ref").asText(null);
+        if (ref != null) return extractRefTail(ref);
+        // name
+        String name = messageNode.path("name").asText(null);
+        if (name != null) return name;
+        // oneOf -> nimm ersten referenzierten Namen
+        JsonNode oneOf = messageNode.path("oneOf");
+        if (oneOf.isArray() && oneOf.size() > 0) {
+            for (JsonNode n : oneOf) {
+                String r = n.path("$ref").asText(null);
+                if (r != null) return extractRefTail(r);
+                String nName = n.path("name").asText(null);
+                if (nName != null) return nName;
+            }
         }
+        return "UnknownMessage";
     }
 
     private String extractRefName(String ref) {
         if (ref == null || ref.isEmpty()) return "UnknownChannel";
-        if (ref.contains("/")) {
-            return ref.substring(ref.lastIndexOf("/") + 1);
-        }
-        return ref;
+        return extractRefTail(ref);
+    }
+
+    private String extractRefTail(String ref) {
+        int i = ref.lastIndexOf('/');
+        return i >= 0 ? ref.substring(i + 1) : ref;
     }
 
     private String extractKafkaBindingInfo(JsonNode kafkaNode) {
-        if (kafkaNode.isMissingNode()) return "";
+        if (kafkaNode == null || kafkaNode.isMissingNode()) return "";
         String groupId = kafkaNode.path("groupId").asText(null);
         String clientId = kafkaNode.path("clientId").asText(null);
 

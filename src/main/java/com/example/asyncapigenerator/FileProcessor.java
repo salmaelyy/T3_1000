@@ -1,6 +1,8 @@
+// src/main/java/com/example/asyncapigenerator/FileProcessor.java
 package com.example.asyncapigenerator;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.util.List;
 
 public class FileProcessor {
@@ -9,7 +11,6 @@ public class FileProcessor {
     private final FileWriterUtil writer = new FileWriterUtil();
 
     public void processFolder(File folder) {
-
         File[] files = folder.listFiles((dir, name) -> name.endsWith(".yaml") || name.endsWith(".yml"));
         if (files == null || files.length == 0) {
             System.out.println("Keine YAML-Dateien gefunden.");
@@ -18,8 +19,13 @@ public class FileProcessor {
 
         File outputDirMmd = new File("generated-sources/mmd");
         File outputDirHtml = new File("generated-sources/html");
-        outputDirMmd.mkdirs();
-        outputDirHtml.mkdirs();
+        try {
+            Files.createDirectories(outputDirMmd.toPath());
+            Files.createDirectories(outputDirHtml.toPath());
+        } catch (Exception e) {
+            System.out.println("Konnte Ausgabeverzeichnisse nicht erstellen: " + e.getMessage());
+            return;
+        }
 
         for (File yamlFile : files) {
             try {
@@ -32,27 +38,20 @@ public class FileProcessor {
                 List<DiagramGenerator.DiagramResult> diagrams = generator.generateMermaid(data);
 
                 if (diagrams.size() == 1) {
-                    // Nur ein Diagramm (Langform)
+                    // nur ein Diagramm (Langform)
                     DiagramGenerator.DiagramResult d = diagrams.get(0);
-                    String mmdPath = new File(outputDirMmd, baseName + ".mmd").getPath();
+                    String mmdPath  = new File(outputDirMmd,  baseName + ".mmd").getPath();
                     String htmlPath = new File(outputDirHtml, baseName + ".html").getPath();
                     writer.writeToFile(mmdPath, d.content);
-                    writer.writeHtmlWithMermaidSingle(htmlPath, d.content);                    System.out.println("Diagramm (" + d.mode + ") für " + yamlFile.getName() + " erfolgreich erzeugt.");
-                } else if (diagrams.size() == 2) {
+                    writer.writeHtmlWithMermaidSingle(htmlPath, d.content);
+                    System.out.println("Diagramm (" + d.mode + ") für " + yamlFile.getName() + " erfolgreich erzeugt.");
+                } else {
                     // Zwei Diagramme (Short + Full)
-                    String shortContent = diagrams.stream()
-                            .filter(d -> d.mode.equals("short"))
-                            .findFirst()
-                            .map(d -> d.content)
-                            .orElse("");
-                    String fullContent = diagrams.stream()
-                            .filter(d -> d.mode.equals("full"))
-                            .findFirst()
-                            .map(d -> d.content)
-                            .orElse("");
+                    String shortContent = diagrams.stream().filter(d -> d.mode.equals("short")).findFirst().map(d -> d.content).orElse("");
+                    String fullContent  = diagrams.stream().filter(d -> d.mode.equals("full")).findFirst().map(d -> d.content).orElse("");
 
-                    String shortMmdPath = new File(outputDirMmd, baseName + "_short.mmd").getPath();
-                    String fullMmdPath = new File(outputDirMmd, baseName + "_full.mmd").getPath();
+                    String shortMmdPath = new File(outputDirMmd,  baseName + "_short.mmd").getPath();
+                    String fullMmdPath  = new File(outputDirMmd,  baseName + "_full.mmd").getPath();
                     writer.writeToFile(shortMmdPath, shortContent);
                     writer.writeToFile(fullMmdPath, fullContent);
 
@@ -62,11 +61,10 @@ public class FileProcessor {
                 }
 
                 System.out.println("-------------------------------------------------------------------------------------------------------------");
-
             } catch (Exception e) {
                 System.out.println("Fehler beim Verarbeiten der Datei: " + yamlFile.getName());
                 System.out.println("-------------------------------------------------------------------------------------------------------------");
-                e.printStackTrace();
+                e.printStackTrace(System.out);
             }
         }
     }
