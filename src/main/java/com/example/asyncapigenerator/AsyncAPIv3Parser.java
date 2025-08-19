@@ -28,7 +28,6 @@ public class AsyncAPIv3Parser {
         }
 
         String specVersion = root.path("asyncapi").asText();
-        System.out.println("Gefundene AsyncAPI-Spezifikation: " + specVersion);
 
         List<Operation> sendOps = new ArrayList<>();
         List<Operation> receiveOps = new ArrayList<>();
@@ -87,18 +86,14 @@ public class AsyncAPIv3Parser {
             }
         });
 
-        boolean flowFound = false;
         for (Operation send : sendOps) {
             for (Operation recv : receiveOps) {
                 if (send.channel.equals(recv.channel) && send.message.equals(recv.message)) {
                     data.addFlow(send.operationId, recv.operationId, send.message);
-                    System.out.printf("  Flow: %s → %s : %s%n", send.operationId, recv.operationId, send.message);
-                    flowFound = true;
                 }
             }
         }
 
-        System.out.println("Anzahl extrahierter Flows: " + data.getFlows().size());
         data.validateFlows();
         return data;
     }
