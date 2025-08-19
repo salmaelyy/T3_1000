@@ -1,4 +1,3 @@
-// src/main/java/com/example/asyncapigenerator/AsyncAPIData.java
 package com.example.asyncapigenerator;
 
 import java.util.*;
@@ -18,9 +17,9 @@ public class AsyncAPIData {
     public void setDescription(String description) { this.description = description; }
 
     public static class Flow {
-        public final String from;
-        public final String to;
-        public final String message;
+        public String from;
+        public String to;
+        public String message;
 
         public Flow(String from, String to, String message) {
             this.from = from;
@@ -30,28 +29,12 @@ public class AsyncAPIData {
     }
 
     private final List<Flow> flows = new ArrayList<>();
-    private final Set<String> flowKeys = new LinkedHashSet<>();
-
-    // NEW: optional notes per participant (e.g., kafka groupId/clientId)
-    private final Map<String, LinkedHashSet<String>> participantNotes = new LinkedHashMap<>();
 
     public void addFlow(String from, String to, String message) {
-        String key = from + "->" + to + ":" + message;
-        if (flowKeys.add(key)) {
-            flows.add(new Flow(from, to, message));
-        }
+        flows.add(new Flow(from, to, message));
     }
 
     public List<Flow> getFlows() { return flows; }
-
-    public void addParticipantNote(String participant, String note) {
-        if (participant == null || note == null || note.isBlank()) return;
-        participantNotes.computeIfAbsent(participant, k -> new LinkedHashSet<>()).add(note);
-    }
-
-    public Map<String, LinkedHashSet<String>> getParticipantNotes() {
-        return participantNotes;
-    }
 
     public void validateFlows() {
         if (flows.isEmpty()) {

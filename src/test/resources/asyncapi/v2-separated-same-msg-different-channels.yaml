@@ -1,0 +1,26 @@
+asyncapi: '2.6.0'
+info:
+  title: Separated same message on different channels
+  version: '1.0.0'
+
+channels:
+  topicA:
+    publish:
+      operationId: ProducerA
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+  topicB:
+    subscribe:
+      operationId: ConsumerB
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+
+components:
+  messages:
+    UserSignedUp:
+      name: UserSignedUp
+      payload:
+        type: object
+        properties:
+          userId:
+            type: string

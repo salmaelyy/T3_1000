@@ -1,0 +1,13 @@
+asyncapi: '2.6.0'
+info:
+  title: No PubSub
+  version: '1.0.0'
+channels:
+  onlyDescriptionHere:
+    description: This channel has no publish or subscribe
+components:
+  messages:
+    Dummy:
+      name: Dummy
+      payload:
+        type: object

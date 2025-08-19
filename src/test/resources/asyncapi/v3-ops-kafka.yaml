@@ -1,0 +1,39 @@
+asyncapi: '3.0.0'
+info:
+  title: V3 Ops Kafka
+  version: '1.0.0'
+
+channels:
+  signup:
+    messages:
+      userSignedUp:
+        $ref: '#/components/messages/UserSignedUp'
+
+operations:
+  sendSignup:
+    action: send
+    operationId: Auth_sendSignup
+    channel: { $ref: "#/channels/signup" }
+    message: { $ref: "#/channels/signup/messages/userSignedUp" }
+    bindings:
+      kafka:
+        clientId: auth-svc
+
+  recvSignup:
+    action: receive
+    operationId: Analytics_recvSignup
+    channel: { $ref: "#/channels/signup" }
+    message: { $ref: "#/channels/signup/messages/userSignedUp" }
+    bindings:
+      kafka:
+        groupId: analytics-group
+        clientId: analytics-svc
+
+components:
+  messages:
+    UserSignedUp:
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          userId: { type: string }

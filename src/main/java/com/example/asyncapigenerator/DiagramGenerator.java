@@ -1,4 +1,3 @@
-// src/main/java/com/example/asyncapigenerator/DiagramGenerator.java
 package com.example.asyncapigenerator;
 
 import java.util.*;
@@ -13,24 +12,24 @@ public class DiagramGenerator {
             participants.add(flow.from);
             participants.add(flow.to);
         }
-
         int participantCount = participants.size();
         Mode mode = participantCount > 5 ? Mode.BOTH : Mode.FULL_ONLY;
 
         List<DiagramResult> results = new ArrayList<>();
         if (mode == Mode.FULL_ONLY) {
             results.add(new DiagramResult("full", buildDiagram(data, false)));
-        } else {
+        } else { // BOTH
             results.add(new DiagramResult("short", buildDiagram(data, true)));
             results.add(new DiagramResult("full", buildDiagram(data, false)));
         }
         return results;
     }
 
-    private String buildDiagram(AsyncAPIData data, boolean useShortNames) {
+    private String buildDiagram(AsyncAPIData data, boolean useShortLabels) {
         StringBuilder sb = new StringBuilder();
         sb.append("sequenceDiagram\n");
 
+        // Teilnehmer sammeln
         Set<String> participants = new LinkedHashSet<>();
         for (AsyncAPIData.Flow flow : data.getFlows()) {
             participants.add(flow.from);
@@ -41,7 +40,9 @@ public class DiagramGenerator {
         Map<String, Integer> aliasCount = new HashMap<>();
 
         for (String name : participants) {
-            String alias = useShortNames ? shortenName(name) : sanitize(name);
+            String label = useShortLabels ? shortenName(name) : name; // LABEL zeigt ggf. Kafka-Notes
+            String alias = sanitize(extractCore(label));               // Alias (technisch, eindeutig)
+
             String baseAlias = alias;
             int count = aliasCount.getOrDefault(baseAlias, 0);
             while (nameToAlias.containsValue(alias)) {
@@ -51,20 +52,7 @@ public class DiagramGenerator {
             aliasCount.put(baseAlias, count);
 
             nameToAlias.put(name, alias);
-            sb.append("    participant ").append(alias).append(" as \"").append(alias).append("\"\n");
-        }
-
-        // NEW: add Notes for participants that have kafka annotations
-        Map<String, LinkedHashSet<String>> notes = data.getParticipantNotes();
-        for (Map.Entry<String, String> entry : nameToAlias.entrySet()) {
-            String originalName = entry.getKey();
-            String alias = entry.getValue();
-            LinkedHashSet<String> n = notes.get(originalName);
-            if (n != null && !n.isEmpty()) {
-                // Mermaid: Note right of <alias>: line1\nline2
-                String joined = String.join("\\n", n); // literal \n for Mermaid
-                sb.append("    Note right of ").append(alias).append(": ").append(joined).append("\n");
-            }
+            sb.append("    participant ").append(alias).append(" as \"").append(escape(label)).append("\"\n");
         }
 
         for (AsyncAPIData.Flow flow : data.getFlows()) {
@@ -73,10 +61,9 @@ public class DiagramGenerator {
                     .append("->>")
                     .append(nameToAlias.get(flow.to))
                     .append(": ")
-                    .append(flow.message)
+                    .append(escape(flow.message))
                     .append("\n");
         }
-
         return sb.toString();
     }
 
@@ -84,7 +71,6 @@ public class DiagramGenerator {
         String base = extractCore(name);
         if (base.isEmpty()) return "N";
         String first7 = base.length() > 7 ? base.substring(0, 7) : base;
-
         char firstUpper = Character.toUpperCase(base.charAt(0));
         char lastUpper = 0;
         for (int i = base.length() - 1; i >= 1; i--) {
@@ -96,13 +82,9 @@ public class DiagramGenerator {
         return shortened ? first7 + suffix + "." : first7;
     }
 
-    private String extractCore(String raw) {
-        return sanitize(raw.replaceAll("[^a-zA-Z0-9]", ""));
-    }
-
-    private String sanitize(String input) {
-        return input.replaceAll("[^a-zA-Z0-9_]", "_");
-    }
+    private String extractCore(String raw) { return raw.replaceAll("[^a-zA-Z0-9_]", ""); }
+    private String sanitize(String input)   { return input.replaceAll("[^a-zA-Z0-9_]", "_"); }
+    private String escape(String s)         { return s.replace("\"","\\\""); }
 
     public static class DiagramResult {
         public final String mode; // "short" oder "full"

@@ -1,17 +1,20 @@
-asyncapi: 2.6.0
+asyncapi: '2.6.0'
 info:
-  title: TestAPI
-  version: 1.0.0
+  title: Separated Same Msg
+  version: '1.0.0'
+
 channels:
-  user/signedup:
+  signupA:
     publish:
-      operationId: testPublisher
+      operationId: ProducerA
       message:
         $ref: '#/components/messages/UserSignedUp'
+  signupB:
     subscribe:
-      operationId: testSubscriber
+      operationId: ConsumerB
       message:
         $ref: '#/components/messages/UserSignedUp'
+
 components:
   messages:
     UserSignedUp:
@@ -19,5 +22,4 @@ components:
       payload:
         type: object
         properties:
-          userId:
-            type: string
+          userId: { type: string }

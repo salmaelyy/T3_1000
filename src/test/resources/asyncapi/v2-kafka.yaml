@@ -1,0 +1,31 @@
+asyncapi: '2.6.0'
+info:
+  title: Kafka Binding Test API
+  version: '1.0.0'
+
+channels:
+  user.signedup:
+    publish:
+      operationId: UserService
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+      bindings:
+        kafka:
+          clientId: user-service
+    subscribe:
+      operationId: AnalyticsService
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+      bindings:
+        kafka:
+          groupId: analytics-group
+          clientId: analytics-service
+
+components:
+  messages:
+    UserSignedUp:
+      name: UserSignedUp
+      payload:
+        type: object
+        properties:
+          userId: { type: string }

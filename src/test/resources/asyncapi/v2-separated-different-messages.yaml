@@ -1,29 +1,31 @@
 asyncapi: '2.6.0'
 info:
-  title: Keine Flows API
+  title: Separated Different Msg
   version: '1.0.0'
+
 channels:
   channel1:
     publish:
+      operationId: Sender
       message:
-        $ref: '#/components/messages/MessageA'
+        $ref: '#/components/messages/A'
   channel2:
     subscribe:
+      operationId: Receiver
       message:
-        $ref: '#/components/messages/MessageB'
+        $ref: '#/components/messages/B'
+
 components:
   messages:
-    MessageA:
-      name: MessageA
+    A:
+      name: A
       payload:
         type: object
         properties:
-          foo:
-            type: string
-    MessageB:
-      name: MessageB
+          x: { type: string }
+    B:
+      name: B
       payload:
         type: object
         properties:
-          bar:
-            type: string
+          y: { type: string }
