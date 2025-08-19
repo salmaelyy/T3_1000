@@ -51,8 +51,20 @@ public class DiagramGenerator {
             aliasCount.put(baseAlias, count);
 
             nameToAlias.put(name, alias);
-            sb.append("    participant ").append(alias)
-                    .append(" as \"").append(alias).append("\"\n"); // Label = Alias (kompakt & sicher)
+            sb.append("    participant ").append(alias).append(" as \"").append(alias).append("\"\n");
+        }
+
+        // NEW: add Notes for participants that have kafka annotations
+        Map<String, LinkedHashSet<String>> notes = data.getParticipantNotes();
+        for (Map.Entry<String, String> entry : nameToAlias.entrySet()) {
+            String originalName = entry.getKey();
+            String alias = entry.getValue();
+            LinkedHashSet<String> n = notes.get(originalName);
+            if (n != null && !n.isEmpty()) {
+                // Mermaid: Note right of <alias>: line1\nline2
+                String joined = String.join("\\n", n); // literal \n for Mermaid
+                sb.append("    Note right of ").append(alias).append(": ").append(joined).append("\n");
+            }
         }
 
         for (AsyncAPIData.Flow flow : data.getFlows()) {

@@ -1,0 +1,69 @@
+asyncapi: '2.6.0'
+info:
+  title: Kafka Binding Test API
+  version: '1.0.0'
+  description: Beispiel-API zum Testen von kafka groupId/clientId in Diagramm & Meta
+
+channels:
+  user.signedup:
+    description: Channel für User-Signup Events
+    publish:
+      operationId: UserService
+      summary: User-Service sendet User-Signup Events
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+      bindings:
+        kafka:
+          clientId: user-service
+    subscribe:
+      operationId: AnalyticsService
+      summary: Analytics-Service empfängt User-Signup Events
+      message:
+        $ref: '#/components/messages/UserSignedUp'
+      bindings:
+        kafka:
+          groupId: analytics-group
+          clientId: analytics-service
+
+  order.created:
+    description: Channel für Order Events
+    publish:
+      operationId: OrderService
+      summary: Order-Service sendet Order Created Events
+      message:
+        $ref: '#/components/messages/OrderCreated'
+      bindings:
+        kafka:
+          clientId: order-service
+    subscribe:
+      operationId: BillingService
+      summary: Billing-Service empfängt Order Created Events
+      message:
+        $ref: '#/components/messages/OrderCreated'
+      bindings:
+        kafka:
+          groupId: billing-group
+          clientId: billing-service
+
+components:
+  messages:
+    UserSignedUp:
+      name: UserSignedUp
+      title: User Signed Up Event
+      payload:
+        type: object
+        properties:
+          userId:
+            type: string
+          email:
+            type: string
+    OrderCreated:
+      name: OrderCreated
+      title: Order Created Event
+      payload:
+        type: object
+        properties:
+          orderId:
+            type: string
+          amount:
+            type: number

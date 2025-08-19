@@ -10,13 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * AsyncAPI v3.x Parser mit Kafka-Bindings-Unterstützung
- * - Liest Metadaten aus info (title, version, description)
- * - Erkennt Kafka groupId/clientId aus bindings.kafka
- * - Robust gegen inline message-Definitionen/oneOf
- * - Vermeidet Doppelflows
- */
 public class AsyncAPIv3Parser {
 
     public AsyncAPIData parseYaml(String filePath) throws Exception {
@@ -24,7 +17,6 @@ public class AsyncAPIv3Parser {
         JsonNode root = mapper.readTree(new File(filePath));
         AsyncAPIData data = new AsyncAPIData();
 
-        // Metadaten
         if (root.has("info")) {
             JsonNode info = root.get("info");
             if (info.has("title")) data.setTitle(info.get("title").asText());
@@ -32,38 +24,35 @@ public class AsyncAPIv3Parser {
             if (info.has("description")) data.setDescription(info.get("description").asText());
         }
 
-        // KEIN erneutes „Gefundene AsyncAPI…“ – das macht der Aufrufer schon
-
         List<Operation> sendOps = new ArrayList<>();
         List<Operation> receiveOps = new ArrayList<>();
 
-        // (Optional) Legacy-ähnlich: v3-Channels könnten publish/subscribe NICHT mehr haben,
-        // aber wenn doch (gemischte Beispiele), tolerieren wir es:
+        // Tolerate legacy publish/subscribe under channels (non-standard v3 but appears in examples)
         JsonNode channels = root.path("channels");
         channels.fields().forEachRemaining(channelEntry -> {
             String channelName = channelEntry.getKey();
             JsonNode channelNode = channelEntry.getValue();
 
-            // subscribe (legacy-stil, nicht v3-Standard – aber toleriert)
             JsonNode subscribeOp = channelNode.path("subscribe");
             if (!subscribeOp.isMissingNode()) {
                 String opId = subscribeOp.path("operationId").asText("subscribe_" + channelName);
                 String messageName = extractMessage(subscribeOp.path("message"));
-                String kafkaInfo = extractKafkaBindingInfo(subscribeOp.path("bindings").path("kafka"));
-                receiveOps.add(new Operation(opId + kafkaInfo, channelName, messageName));
+                receiveOps.add(new Operation(opId, channelName, messageName));
+                String kafkaNote = buildKafkaNote(subscribeOp.path("bindings").path("kafka"));
+                if (!kafkaNote.isBlank()) data.addParticipantNote(opId, kafkaNote);
             }
 
-            // publish
             JsonNode publishOp = channelNode.path("publish");
             if (!publishOp.isMissingNode()) {
                 String opId = publishOp.path("operationId").asText("publish_" + channelName);
                 String messageName = extractMessage(publishOp.path("message"));
-                String kafkaInfo = extractKafkaBindingInfo(publishOp.path("bindings").path("kafka"));
-                sendOps.add(new Operation(opId + kafkaInfo, channelName, messageName));
+                sendOps.add(new Operation(opId, channelName, messageName));
+                String kafkaNote = buildKafkaNote(publishOp.path("bindings").path("kafka"));
+                if (!kafkaNote.isBlank()) data.addParticipantNote(opId, kafkaNote);
             }
         });
 
-        // v3-Standard: operations
+        // v3 standard: operations
         JsonNode operations = root.path("operations");
         operations.fields().forEachRemaining(opEntry -> {
             String opId = opEntry.getKey();
@@ -72,19 +61,20 @@ public class AsyncAPIv3Parser {
 
             String channelRef = opNode.path("channel").path("$ref").asText();
             if (channelRef.isEmpty()) channelRef = opNode.path("channel").asText();
-            String channelName = extractRefName(channelRef);
+            String channelName = extractRefTail(channelRef);
 
             String messageName = extractMessage(opNode.path("message"));
-            String kafkaInfo = extractKafkaBindingInfo(opNode.path("bindings").path("kafka"));
-
             if ("send".equalsIgnoreCase(action)) {
-                sendOps.add(new Operation(opId + kafkaInfo, channelName, messageName));
+                sendOps.add(new Operation(opId, channelName, messageName));
             } else if ("receive".equalsIgnoreCase(action)) {
-                receiveOps.add(new Operation(opId + kafkaInfo, channelName, messageName));
+                receiveOps.add(new Operation(opId, channelName, messageName));
             }
+            // NEW: kafka note on operation
+            String kafkaNote = buildKafkaNote(opNode.path("bindings").path("kafka"));
+            if (!kafkaNote.isBlank()) data.addParticipantNote(opId, kafkaNote);
         });
 
-        // Flows erzeugen (dedupliziert via AsyncAPIData.addFlow)
+        // Build flows (dedup done in AsyncAPIData.addFlow)
         for (Operation send : sendOps) {
             for (Operation recv : receiveOps) {
                 if (Objects.equals(send.channel, recv.channel) && Objects.equals(send.message, recv.message)) {
@@ -99,25 +89,17 @@ public class AsyncAPIv3Parser {
         return data;
     }
 
-    // ==== Hilfsklassen & Methoden ====
     static class Operation {
         final String operationId, channel, message;
-        Operation(String op, String ch, String msg) {
-            this.operationId = op;
-            this.channel = ch;
-            this.message = msg;
-        }
+        Operation(String op, String ch, String msg) { this.operationId = op; this.channel = ch; this.message = msg; }
     }
 
     private String extractMessage(JsonNode messageNode) {
         if (messageNode == null || messageNode.isMissingNode() || messageNode.isNull()) return "UnknownMessage";
-        // $ref
         String ref = messageNode.path("$ref").asText(null);
         if (ref != null) return extractRefTail(ref);
-        // name
         String name = messageNode.path("name").asText(null);
         if (name != null) return name;
-        // oneOf -> nimm ersten referenzierten Namen
         JsonNode oneOf = messageNode.path("oneOf");
         if (oneOf.isArray() && oneOf.size() > 0) {
             for (JsonNode n : oneOf) {
@@ -130,30 +112,21 @@ public class AsyncAPIv3Parser {
         return "UnknownMessage";
     }
 
-    private String extractRefName(String ref) {
-        if (ref == null || ref.isEmpty()) return "UnknownChannel";
-        return extractRefTail(ref);
-    }
-
     private String extractRefTail(String ref) {
+        if (ref == null || ref.isEmpty()) return "Unknown";
         int i = ref.lastIndexOf('/');
         return i >= 0 ? ref.substring(i + 1) : ref;
     }
 
-    private String extractKafkaBindingInfo(JsonNode kafkaNode) {
+    private String buildKafkaNote(JsonNode kafkaNode) {
         if (kafkaNode == null || kafkaNode.isMissingNode()) return "";
-        String groupId = kafkaNode.path("groupId").asText(null);
+        String groupId  = kafkaNode.path("groupId").asText(null);
         String clientId = kafkaNode.path("clientId").asText(null);
-
         StringBuilder sb = new StringBuilder();
         if (groupId != null || clientId != null) {
-            sb.append(" (");
-            if (groupId != null) sb.append("groupId=").append(groupId);
-            if (clientId != null) {
-                if (groupId != null) sb.append(", ");
-                sb.append("clientId=").append(clientId);
-            }
-            sb.append(")");
+            sb.append("kafka:");
+            if (groupId != null)  sb.append(" groupId=").append(groupId);
+            if (clientId != null) sb.append(groupId != null ? ", " : " ").append("clientId=").append(clientId);
         }
         return sb.toString();
     }

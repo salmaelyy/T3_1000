@@ -1,9 +1,7 @@
+// src/main/java/com/example/asyncapigenerator/AsyncAPIData.java
 package com.example.asyncapigenerator;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class AsyncAPIData {
     private String version;
@@ -32,8 +30,10 @@ public class AsyncAPIData {
     }
 
     private final List<Flow> flows = new ArrayList<>();
-    // Für einfache Duplikats-Prävention (z. B. bei v3, wenn „channels“ & „operations“ beide erkannt werden)
     private final Set<String> flowKeys = new LinkedHashSet<>();
+
+    // NEW: optional notes per participant (e.g., kafka groupId/clientId)
+    private final Map<String, LinkedHashSet<String>> participantNotes = new LinkedHashMap<>();
 
     public void addFlow(String from, String to, String message) {
         String key = from + "->" + to + ":" + message;
@@ -43,6 +43,15 @@ public class AsyncAPIData {
     }
 
     public List<Flow> getFlows() { return flows; }
+
+    public void addParticipantNote(String participant, String note) {
+        if (participant == null || note == null || note.isBlank()) return;
+        participantNotes.computeIfAbsent(participant, k -> new LinkedHashSet<>()).add(note);
+    }
+
+    public Map<String, LinkedHashSet<String>> getParticipantNotes() {
+        return participantNotes;
+    }
 
     public void validateFlows() {
         if (flows.isEmpty()) {

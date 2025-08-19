@@ -15,7 +15,6 @@ public class AsyncAPIParser {
         JsonNode root = mapper.readTree(new File(filePath));
         AsyncAPIData data = new AsyncAPIData();
 
-        // Meta
         if (root.has("info")) {
             JsonNode info = root.get("info");
             if (info.has("title"))       data.setTitle(info.get("title").asText());
@@ -29,12 +28,9 @@ public class AsyncAPIParser {
         if (specVersion.startsWith("1.")) {
             throw new IllegalStateException("AsyncAPI v1.x wird nicht unterstützt. Bitte v2.x oder v3.x verwenden.");
         }
-
         if (specVersion.startsWith("3.")) {
-            // Delegation an v3-Parser (der loggt die Version NICHT erneut)
             return new AsyncAPIv3Parser().parseYaml(filePath);
         }
-
         if (!specVersion.startsWith("2.")) {
             throw new IllegalStateException("Unbekannte AsyncAPI-Version: " + specVersion);
         }
@@ -56,12 +52,14 @@ public class AsyncAPIParser {
                     String msgRef = valueOrNull(publishNode.path("message").path("$ref"));
                     String msgName = msgRef != null ? extractMessageName(msgRef)
                             : extractInlineMessageName(publishNode.path("message"));
-                    msgName = appendKafkaInfo(publishNode, msgName);
+                    // NEW: kafka note
+                    String kafkaNote = buildKafkaNote(publishNode.path("bindings").path("kafka"));
 
                     if (opId != null && msgName != null) {
                         Producer p = new Producer(opId, msgName, channelName);
                         producers.add(p);
                         channelPublishes.computeIfAbsent(channelName, k -> new ArrayList<>()).add(p);
+                        if (!kafkaNote.isBlank()) data.addParticipantNote(opId, kafkaNote);
                     }
                 } else if (fieldName.startsWith("subscribe")) {
                     JsonNode subscribeNode = channel.path(fieldName);
@@ -69,12 +67,14 @@ public class AsyncAPIParser {
                     String msgRef = valueOrNull(subscribeNode.path("message").path("$ref"));
                     String msgName = msgRef != null ? extractMessageName(msgRef)
                             : extractInlineMessageName(subscribeNode.path("message"));
-                    msgName = appendKafkaInfo(subscribeNode, msgName);
+                    // NEW: kafka note
+                    String kafkaNote = buildKafkaNote(subscribeNode.path("bindings").path("kafka"));
 
                     if (opId != null && msgName != null) {
                         Consumer c = new Consumer(opId, msgName, channelName);
                         consumers.add(c);
                         channelSubscribes.computeIfAbsent(channelName, k -> new ArrayList<>()).add(c);
+                        if (!kafkaNote.isBlank()) data.addParticipantNote(opId, kafkaNote);
                     }
                 }
             });
@@ -88,7 +88,6 @@ public class AsyncAPIParser {
                 }
             }
         }
-
         // Service -> Topic
         for (Map.Entry<String, List<Producer>> e : channelPublishes.entrySet()) {
             String topicNode = "topic:" + e.getKey();
@@ -108,20 +107,18 @@ public class AsyncAPIParser {
         return data;
     }
 
-    private String appendKafkaInfo(JsonNode operationNode, String messageName) {
-        if (messageName == null) return null;
-        JsonNode kafkaBindings = operationNode.path("bindings").path("kafka");
-        if (!kafkaBindings.isMissingNode()) {
-            String groupId = valueOrNull(kafkaBindings.path("groupId"));
-            String clientId = valueOrNull(kafkaBindings.path("clientId"));
-            StringBuilder sb = new StringBuilder(messageName);
-            boolean hasInfo = false;
-            if (groupId != null) { sb.append(" (groupId=").append(groupId); hasInfo = true; }
-            if (clientId != null) { sb.append(hasInfo ? ", clientId=" : " (clientId=").append(clientId); hasInfo = true; }
-            if (hasInfo) sb.append(")");
-            return sb.toString();
+    // NEW: build a compact kafka note like "kafka: groupId=foo, clientId=bar"
+    private String buildKafkaNote(JsonNode kafkaNode) {
+        if (kafkaNode == null || kafkaNode.isMissingNode()) return "";
+        String groupId  = valueOrNull(kafkaNode.path("groupId"));
+        String clientId = valueOrNull(kafkaNode.path("clientId"));
+        StringBuilder sb = new StringBuilder();
+        if (groupId != null || clientId != null) {
+            sb.append("kafka:");
+            if (groupId != null)  sb.append(" groupId=").append(groupId);
+            if (clientId != null) sb.append(groupId != null ? ", " : " ").append("clientId=").append(clientId);
         }
-        return messageName;
+        return sb.toString();
     }
 
     static class Producer {
@@ -139,22 +136,17 @@ public class AsyncAPIParser {
         return i >= 0 ? messageRef.substring(i + 1) : messageRef;
     }
 
-    // v2: falls message inline definiert ist, bestmöglich einen Namen ableiten
     private String extractInlineMessageName(JsonNode messageNode) {
         if (messageNode == null || messageNode.isMissingNode() || messageNode.isNull()) return null;
         String name = valueOrNull(messageNode.path("name"));
         if (name != null) return name;
-        // oneOf: nimm den ersten gültigen $ref-Namen
         JsonNode oneOf = messageNode.path("oneOf");
         if (oneOf.isArray() && oneOf.size() > 0) {
             for (JsonNode n : oneOf) {
                 String ref = valueOrNull(n.path("$ref"));
-                if (ref != null) {
-                    return extractMessageName(ref);
-                }
+                if (ref != null) return extractMessageName(ref);
             }
         }
-        // Fallback
         return "Message";
     }
 
