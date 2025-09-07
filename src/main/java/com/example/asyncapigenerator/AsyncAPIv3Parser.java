@@ -7,12 +7,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.File;
 import java.util.*;
 
-/**
- * AsyncAPI v3.x Parser
- * - Liest Metadaten
- * - Erzeugt Flows aus operations (send/receive) und ggf. aus channels.publish/subscribe (falls vorhanden)
- * - Merged Kafka-Bindings aus Operation UND Channel (Operation > Channel)
- */
 public class AsyncAPIv3Parser {
 
     public AsyncAPIData parseYaml(String filePath) throws Exception {
@@ -27,12 +21,10 @@ public class AsyncAPIv3Parser {
             if (info.has("description")) data.setDescription(info.get("description").asText());
         }
 
-        String specVersion = root.path("asyncapi").asText();
-
         List<Operation> sendOps = new ArrayList<>();
         List<Operation> receiveOps = new ArrayList<>();
 
-        // --- v3 channels (manche Modelle tragen trotzdem publish/subscribe) ---
+        // v3 channels (manche Modelle tragen trotzdem publish/subscribe) ---
         JsonNode channels = root.path("channels");
         channels.fields().forEachRemaining(channelEntry -> {
             String channelName = channelEntry.getKey();
@@ -58,7 +50,6 @@ public class AsyncAPIv3Parser {
             }
         });
 
-        // --- v3 operations (send/receive, referenzieren channel) ---
         JsonNode operations = root.path("operations");
         operations.fields().forEachRemaining(opEntry -> {
             String opId = opEntry.getKey();
@@ -69,7 +60,6 @@ public class AsyncAPIv3Parser {
             if (channelRef.isEmpty()) channelRef = opNode.path("channel").asText();
             String channelName = extractRefName(channelRef);
 
-            // ggf. Channel-Bindings ziehen
             JsonNode channelNode = channels.path(channelName);
             JsonNode channelKafka = channelNode.path("bindings").path("kafka");
 
@@ -93,7 +83,6 @@ public class AsyncAPIv3Parser {
                 }
             }
         }
-
         data.validateFlows();
         return data;
     }
@@ -115,7 +104,6 @@ public class AsyncAPIv3Parser {
         return ref;
     }
 
-    /** Merge op.kafka > channel.kafka; erzeugt " (groupId=..., clientId=...)" oder "" */
     private String mergeKafkaBindingInfo(JsonNode opKafka, JsonNode channelKafka) {
         String groupId = firstNonNull(opKafka.path("groupId").asText(null),
                 channelKafka.isMissingNode() ? null : channelKafka.path("groupId").asText(null));

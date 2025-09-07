@@ -16,6 +16,7 @@ public class AsyncAPIData {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
+
     public static class Flow {
         public String from;
         public String to;
@@ -27,7 +28,7 @@ public class AsyncAPIData {
             this.message = message;
         }
     }
-
+    //final da die liste nur befüllt und nicht ersetzt wird
     private final List<Flow> flows = new ArrayList<>();
 
     public void addFlow(String from, String to, String message) {

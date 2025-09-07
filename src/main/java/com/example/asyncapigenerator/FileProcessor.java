@@ -17,13 +17,7 @@ public class FileProcessor {
             return;
         }
 
-        // Basis-Pfad: Projekt-Root/generated-sources (keine Ausgabe in target/)
         File outRoot = new File(System.getProperty("user.dir"), "generated-sources");
-        // Optional per System-Property überschreibbar: -Dout.dir=/pfad/wohin
-        String override = System.getProperty("out.dir");
-        if (override != null && !override.isBlank()) {
-            outRoot = new File(override);
-        }
 
         File outputDirMmd = new File(outRoot, "mmd");
         File outputDirHtml = new File(outRoot, "html");
@@ -74,7 +68,6 @@ public class FileProcessor {
                 e.printStackTrace(System.out);
             }
         }
-
         System.out.println("\n>> Outputs liegen unter: " + outRoot.getAbsolutePath() + " {mmd, html}\n");
     }
 }

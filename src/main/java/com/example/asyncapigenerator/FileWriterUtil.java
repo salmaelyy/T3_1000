@@ -13,7 +13,6 @@ public class FileWriterUtil {
         Files.write(Paths.get(fileName), content.getBytes(StandardCharsets.UTF_8));
     }
 
-    // für Integrationstest & Meta-Panel nutzbar
     public String buildMetaHtml(AsyncAPIData data) {
         Set<String> participants = new LinkedHashSet<>();
         for (AsyncAPIData.Flow f : data.getFlows()) {
@@ -129,33 +128,6 @@ public class FileWriterUtil {
         html = html.replace("%SHORT%", shortCode)
                 .replace("%FULL%",  fullCode)
                 .replace("%META%",  metaHtml);
-        writeToFile(fileName, html);
-    }
-
-    // (optional) ein Diagramm ohne Toggle
-    public void writeHtmlWithMermaidSingle(String fileName, String mermaidCode) throws Exception {
-        String html = """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <title>Mermaid Diagramm</title>
-          <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({ startOnLoad: true });
-          </script>
-          <style>
-            body { margin: 0; padding: 0; font-family: sans-serif; background-color: #f8f8f8; }
-            .mermaid-container { width: 100%; height: 100vh; overflow: auto; padding: 20px; box-sizing: border-box; }
-            .mermaid { font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="mermaid-container"><div class="mermaid">%%DIAGRAM%%</div></div>
-        </body>
-        </html>
-        """;
-        html = html.replace("%%DIAGRAM%%", mermaidCode);
         writeToFile(fileName, html);
     }
 

@@ -51,9 +51,7 @@ public class AsyncAPIParser {
                     String opId  = valueOrNull(publishNode.path("operationId"));
                     String msgRef = valueOrNull(publishNode.path("message").path("$ref"));
                     String msgName = extractMessageName(msgRef);
-                    if (msgName != null) {
-                        msgName = appendKafkaInfo(publishNode, msgName);
-                    }
+                    msgName = appendKafkaInfo(publishNode, msgName);
 
                     if (opId != null && msgName != null) {
                         Producer p = new Producer(opId, msgName, channelName);
@@ -76,9 +74,10 @@ public class AsyncAPIParser {
             });
         });
 
+
+
         Set<String> seen = new LinkedHashSet<>();
 
-        // NEU: erlaube direkten Flow nur, wenn Channel **und** Message matchen
         for (Producer p : producers) {
             for (Consumer c : consumers) {
                 if (p.channel.equals(c.channel) && p.message.equals(c.message)) {
@@ -107,7 +106,6 @@ public class AsyncAPIParser {
                 }
             }
         }
-
         data.validateFlows();
         return data;
     }

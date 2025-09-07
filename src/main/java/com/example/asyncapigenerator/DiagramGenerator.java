@@ -29,7 +29,6 @@ public class DiagramGenerator {
         StringBuilder sb = new StringBuilder();
         sb.append("sequenceDiagram\n");
 
-        // Teilnehmer sammeln
         Set<String> participants = new LinkedHashSet<>();
         for (AsyncAPIData.Flow flow : data.getFlows()) {
             participants.add(flow.from);
@@ -40,9 +39,8 @@ public class DiagramGenerator {
         Map<String, Integer> aliasCount = new HashMap<>();
 
         for (String name : participants) {
-            String label = useShortLabels ? shortenName(name) : name; // LABEL zeigt ggf. Kafka-Notes
-            String alias = sanitize(extractCore(label));               // Alias (technisch, eindeutig)
-
+            String label = useShortLabels ? shortenName(name) : name;
+            String alias = sanitize(extractCore(label));
             String baseAlias = alias;
             int count = aliasCount.getOrDefault(baseAlias, 0);
             while (nameToAlias.containsValue(alias)) {
@@ -50,11 +48,13 @@ public class DiagramGenerator {
                 alias = baseAlias + count;
             }
             aliasCount.put(baseAlias, count);
-
             nameToAlias.put(name, alias);
-            sb.append("    participant ").append(alias).append(" as \"").append(escape(label)).append("\"\n");
+            sb.append("    participant ")
+                    .append(alias)
+                    .append(" as \"")
+                    .append(escape(label))
+                    .append("\"\n");
         }
-
         for (AsyncAPIData.Flow flow : data.getFlows()) {
             sb.append("    ")
                     .append(nameToAlias.get(flow.from))
