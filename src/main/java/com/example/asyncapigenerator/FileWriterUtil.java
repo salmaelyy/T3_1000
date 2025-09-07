@@ -130,7 +130,7 @@ public class FileWriterUtil {
                 .replace("%META%",  metaHtml);
         writeToFile(fileName, html);
     }
-
+    // ==== Hilfen ====
     private static String nullToDash(String s) { return (s == null || s.isBlank()) ? "—" : s; }
     private static String esc(String s) {
         return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;");

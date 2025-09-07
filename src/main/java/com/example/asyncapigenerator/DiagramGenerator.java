@@ -66,7 +66,7 @@ public class DiagramGenerator {
         }
         return sb.toString();
     }
-
+    // ==== Hilfen ====
     private String shortenName(String name) {
         String base = extractCore(name);
         if (base.isEmpty()) return "N";
