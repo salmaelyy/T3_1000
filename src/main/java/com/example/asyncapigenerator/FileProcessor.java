@@ -1,4 +1,3 @@
-// src/main/java/com/example/asyncapigenerator/FileProcessor.java
 package com.example.asyncapigenerator;
 
 import java.io.File;

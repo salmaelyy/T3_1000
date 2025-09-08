@@ -2,7 +2,7 @@
 
 Dieses Projekt verarbeitet **AsyncAPI**-Spezifikationen (v2.x und v3.x) und erzeugt daraus **Mermaid Sequence-Diagramme** inklusive **HTML-Ansicht** mit Toggle (Kurz/Lang) und **Metadaten-Panel**.
 
-> ⚠️ Fokus ist ein schlanker Parser für die für die Diagrammerstellung relevanten Teile der Spezifikation – kein vollumfänglicher AsyncAPI-Interpreter.
+> ⚠️ Fokus ist ein schlanker Parser für die für die Diagrammerstellung relevanten Teile der Spezifikation und kein vollumfänglicher AsyncAPI-Interpreter.
 
 ---
 
@@ -20,7 +20,6 @@ Dieses Projekt verarbeitet **AsyncAPI**-Spezifikationen (v2.x und v3.x) und erze
 - [Bekannte Einschränkungen](#bekannte-einschränkungen)
 - [Tipps zur Fehlerbehebung](#tipps-zur-fehlerbehebung)
 - [Weiterentwicklung](#weiterentwicklung)
-- [Lizenz](#lizenz)
 
 ---
 
@@ -50,7 +49,7 @@ Dieses Projekt verarbeitet **AsyncAPI**-Spezifikationen (v2.x und v3.x) und erze
 ### Erwartete Felder (vereinfachter Ausschnitt)
 
 **v2.x**
-- `info.title`, `info.version`, `info.description` (optional; für Metadaten)
+- `info.title`, `info.version`, `info.description` (optional, für Metadaten)
 - `channels`
   - pro Channel: Knoten, die mit **`publish`** bzw. **`subscribe`** **beginnen** (z. B. `publish`, `publish__1`, …)
     - `operationId` (Producer/Consumer-Name im Diagramm)
@@ -58,9 +57,9 @@ Dieses Projekt verarbeitet **AsyncAPI**-Spezifikationen (v2.x und v3.x) und erze
     - optional: `bindings.kafka.{groupId, clientId}`
 
 **v3.x**
-- `info.title`, `info.version`, `info.description` (optional; für Metadaten)
+- `info.title`, `info.version`, `info.description` (optional, für Metadaten)
 - `channels` (optional **zusätzlich** zu `operations`):
-  - evtl. `publish`/`subscribe`-Knoten analog v2 (werden berücksichtigt)
+  - evtl. `publish`/`subscribe`-Knoten wie in v2 werden berücksichtigt
   - optional: `bindings.kafka.{groupId, clientId}` (Channel-Level)
 - `operations` (**primär** in v3)
   - je Operation:
@@ -74,7 +73,7 @@ Dieses Projekt verarbeitet **AsyncAPI**-Spezifikationen (v2.x und v3.x) und erze
 
 ---
 
-## Kafka-Bindings (Hinweistexte)
+## Kafka-Bindings
 
 Wenn **`bindings.kafka`** vorhanden ist, werden **groupId/clientId** als reine Hinweise in den Diagrammen ergänzt (keine Logikänderung).
 
@@ -83,7 +82,8 @@ Wenn **`bindings.kafka`** vorhanden ist, werden **groupId/clientId** als reine H
 - **AsyncAPI v3.x**: Hinweise werden **an die *operationId* (Teilnehmer)** angehängt, z. B.
   - `recvSignup (groupId=analytics-group, clientId=analytics-svc)`
 
-> In **Kurzdiagrammen** werden Teilnehmernamen **verkürzt** (nur alphanumerische Kernteile); dabei können Klammern/`groupId=`/`clientId=` im Label entfallen. Die **Langform** enthält die vollständigen Hinweise.
+> In **Kurzdiagrammen** werden Teilnehmernamen **verkürzt**. 
+> Dabei können Klammern/`groupId=`/`clientId=` im Label entfallen. Die **Langform** enthält die vollständigen Hinweise.
 
 ---
 
@@ -107,7 +107,7 @@ Es gibt **zwei** Arten von Kanten/Flows:
 
 ## Ausgaben & Dateistruktur
 
-Standard-Ausgabe liegt **im Projekt-Root** unter `generated-sources/` (nicht unter `target/`).  
+Standard-Ausgabe liegt **im Projekt-Root** unter `generated-sources/`.  
 Der Basisordner kann via System-Property überschrieben werden: `-Dout.dir=/absoluter/pfad`.
 
 ```
@@ -120,8 +120,8 @@ generated-sources/
 ```
 
 **HTML-Viewer**  
-- Mermaid wird per **CDN** (v10, ESM) geladen. Offline-Nutzung erfordert eigenes Bundling.
 
+- Standardmäßig lädt man Mermaid über einen Online-Dienst. Für die Nutzung ohne Internet muss man es lokal installieren und ins eigene Projekt einbinden
 **Benennung**
 - `<name>` entspricht dem YAML-Dateinamen ohne Erweiterung.
 
@@ -145,17 +145,17 @@ mvn test
 ### 2) Generator starten
 
 **Variante A – Skript (empfohlen):**
-```bash
-./scripts/run.sh
-```
-- Baut das Projekt (Tests übersprungen) und startet `Main`.
-
-**Variante B – Main Klasse:**
 - Es gibt eine `Main`-Klasse, die den **Ordner `asyncapi/` im Projekt-Root** verarbeitet.
 
 > ⚠ Hinweis: Das Skript akzeptiert zwar einen Pfadparameter, die aktuelle `Main`-Klasse liest jedoch fest `asyncapi/`. Falls du andere Ordner verarbeiten willst, bitte `Main` anpassen.
 
+- Baut das Projekt (Tests übersprungen) und startet `Main`.
 
+**Variante B – Main Klasse:**
+
+```bash
+./scripts/run.sh
+```
 
 ### 3) Aufräumen
 ```bash
@@ -180,7 +180,7 @@ Die Unit-/Integrationstests liegen unter `src/test/java` und nutzen Test-YAMLs i
 - `v2-separated-different-messages.yaml`  
   - Unterschiedliche Messages → **nur Bridging**.
 
-Die Tests prüfen u. a.:
+Die Tests prüfen u.a.:
 - Erkennung der Spezversions (v2/v3)
 - Generierung von direkten Flows und Bridging-Flows gemäß Matching-Regeln
 - Anzeige der Kafka-Hinweise (v2: an Message, v3: am Teilnehmer)
@@ -221,11 +221,11 @@ src/
 
 ## Bekannte Einschränkungen
 
-- Kein vollständiger AsyncAPI-Support (z. B. **servers**, **security**, **bindings** außer Kafka/ID-Felder, **payloads/schemas** werden **nicht** gerendert).
+- Kein vollständiger AsyncAPI-Support (z.B. **servers**, **security**, **bindings** außer Kafka/ID-Felder, **payloads/schemas** werden **nicht** gerendert).
 - **Input-Ordner** ist aktuell in `Main` **hart auf `asyncapi/`** gesetzt. Das Skript erlaubt Parameter, die die aktuelle `Main` jedoch nicht nutzt.
 - **Kurzlabels** entfernen Nicht-Alphanumerisches – Kafka-Hinweise sind dann nur in der **Langform** sichtbar.
 - **Mermaid via CDN**: Offline-Betrieb erfordert zusätzliches Bundling/Hosting.
-- Keine dedizierte **CLI** mit Optionen (z. B. zur Auswahl des Ausgabeverzeichnisses) – nur `-Dout.dir=…` für den Ausgabepfad.
+- Keine dedizierte **CLI** mit Optionen (z.B. zur Auswahl des Ausgabeverzeichnisses) – nur `-Dout.dir=…` für den Ausgabepfad.
 
 ---
 
@@ -245,12 +245,6 @@ src/
 - **Kafka-Hinweise fehlen**  
   - v2: nur wenn `bindings.kafka` am jeweiligen `publish/subscribe`-Knoten vorhanden ist. Anzeige an der **Message**.
   - v3: Merge aus Operation- und Channel-Bindings; Anzeige an den **Teilnehmern** (operationId).
-
----
-
-## Lizenz
-
-...
 
 ---
 
