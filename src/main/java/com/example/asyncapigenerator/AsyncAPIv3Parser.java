@@ -21,10 +21,10 @@ public class AsyncAPIv3Parser {
             if (info.has("description")) data.setDescription(info.get("description").asText());
         }
 
-        List<Operation> sendOps = new ArrayList<>();
+        List<Operation> sendOps = new ArrayList<>(); //sammler listen für send und receive operationen
         List<Operation> receiveOps = new ArrayList<>();
 
-        // v3 channels (manche Modelle tragen trotzdem publish/subscribe) ---
+        // v3 channels (manche Modelle tragen trotzdem publish/subscribe)
         JsonNode channels = root.path("channels");
         channels.fields().forEachRemaining(channelEntry -> {
             String channelName = channelEntry.getKey();
@@ -33,7 +33,7 @@ public class AsyncAPIv3Parser {
 
             JsonNode subscribeOp = channelNode.path("subscribe");
             if (!subscribeOp.isMissingNode()) {
-                String opId = subscribeOp.path("operationId").asText("subscribe_" + channelName);
+                String opId = subscribeOp.path("operationId").asText("subscribe_" + channelName); //fallback
                 String msgRef = subscribeOp.path("message").path("$ref").asText();
                 String messageName = extractMessageName(msgRef);
                 String kafkaInfo = mergeKafkaBindingInfo(subscribeOp.path("bindings").path("kafka"), channelKafka);
@@ -66,7 +66,7 @@ public class AsyncAPIv3Parser {
             String msgRef = opNode.path("message").path("$ref").asText();
             String messageName = extractMessageName(msgRef);
 
-            // Merge: op.kafka > channel.kafka
+            // op.kafka > channel.kafka
             String kafkaInfo = mergeKafkaBindingInfo(opNode.path("bindings").path("kafka"), channelKafka);
 
             if ("send".equalsIgnoreCase(action)) {
@@ -93,10 +93,12 @@ public class AsyncAPIv3Parser {
         Operation(String op, String ch, String msg) { this.operationId = op; this.channel = ch; this.message = msg; }
     }
 
+    // #/components/messages/OrderCreated -> OrderCreated
     private String extractMessageName(String ref) {
         if (ref != null && ref.contains("/")) return ref.substring(ref.lastIndexOf("/") + 1);
         return (ref == null || ref.isBlank()) ? "UnknownMessage" : ref;
     }
+
 
     private String extractRefName(String ref) {
         if (ref == null || ref.isEmpty()) return "UnknownChannel";
@@ -104,6 +106,7 @@ public class AsyncAPIv3Parser {
         return ref;
     }
 
+    // opKafka>channelKafka
     private String mergeKafkaBindingInfo(JsonNode opKafka, JsonNode channelKafka) {
         String groupId = firstNonNull(opKafka.path("groupId").asText(null),
                 channelKafka.isMissingNode() ? null : channelKafka.path("groupId").asText(null));
@@ -119,5 +122,6 @@ public class AsyncAPIv3Parser {
         return sb.toString();
     }
 
+    // wenn a da ist nimm a sonst b für bindings
     private String firstNonNull(String a, String b) { return a != null ? a : b; }
 }

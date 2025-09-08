@@ -11,10 +11,16 @@ import static org.junit.jupiter.api.Assertions.*;
 public class DiagramGeneratorTest {
 
     private String res(String name) {
-        URL u = getClass().getResource("/asyncapi/" + name);
+        var u = getClass().getResource("/asyncapi/" + name);
         assertNotNull(u, "Test-Resource fehlt: " + name);
-        return Paths.get(u.getPath()).toString();
+        try {
+            return java.nio.file.Path.of(u.toURI()).toString();
+        } catch (java.net.URISyntaxException e) {
+            throw new RuntimeException("Ungültige Resource-URI für " + name, e);
+        }
     }
+
+
 
     @Test
     void generatesMermaidAndKafkaNotesIfPresent() throws Exception {

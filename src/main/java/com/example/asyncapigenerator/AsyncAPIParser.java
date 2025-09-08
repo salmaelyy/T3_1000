@@ -11,7 +11,7 @@ public class AsyncAPIParser {
 
     public AsyncAPIData parseYaml(String filePath) throws Exception {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        JsonNode root = mapper.readTree(new File(filePath));
+        JsonNode root = mapper.readTree(new File(filePath)); //lies die datei als baum ein
         AsyncAPIData data = new AsyncAPIData();
 
         if (root.has("info")) {
@@ -36,10 +36,11 @@ public class AsyncAPIParser {
         }
 
         JsonNode channels = root.path("channels");
-        List<Producer> producers = new ArrayList<>();
+        List<Producer> producers = new ArrayList<>(); //alle prod
         List<Consumer> consumers = new ArrayList<>();
-        Map<String, List<Producer>> channelPublishes = new LinkedHashMap<>();
-        Map<String, List<Consumer>> channelSubscribes = new LinkedHashMap<>();
+        Map<String, List<Producer>> channelPublishes = new LinkedHashMap<>(); //prod innerhalb des channels
+        Map<String, List<Consumer>> channelSubscribes = new LinkedHashMap<>(); //channel name und entsprechende cons
+
 
         channels.fields().forEachRemaining(entry -> {
             String channelName = entry.getKey();
@@ -51,7 +52,7 @@ public class AsyncAPIParser {
                     String opId  = valueOrNull(publishNode.path("operationId"));
                     String msgRef = valueOrNull(publishNode.path("message").path("$ref"));
                     String msgName = extractMessageName(msgRef);
-                    msgName = appendKafkaInfo(publishNode, msgName);
+                    msgName = appendKafkaInfo(publishNode, msgName); //kafka bindings zb client id
 
                     if (opId != null && msgName != null) {
                         Producer p = new Producer(opId, msgName, channelName);
@@ -68,13 +69,11 @@ public class AsyncAPIParser {
                     if (opId != null && msgName != null) {
                         Consumer c = new Consumer(opId, msgName, channelName);
                         consumers.add(c);
-                        channelSubscribes.computeIfAbsent(channelName, k -> new ArrayList<>()).add(c);
+                        channelSubscribes.computeIfAbsent(channelName, k -> new ArrayList<>()).add(c); //Sucht in der Map nach channelName
                     }
                 }
             });
         });
-
-
 
         Set<String> seen = new LinkedHashSet<>();
 
@@ -82,7 +81,7 @@ public class AsyncAPIParser {
             for (Consumer c : consumers) {
                 if (p.channel.equals(c.channel) && p.message.equals(c.message)) {
                     String key = p.operationId + "->" + c.operationId + ":" + p.message;
-                    if (seen.add(key)) {
+                    if (seen.add(key)) { //true wenn neu
                         data.addFlow(p.operationId, c.operationId, p.message);
                     }
                 }
@@ -90,6 +89,7 @@ public class AsyncAPIParser {
         }
 
         // Topic-Bridging
+        // iteration pro channel über alle prod in publish und füge kante hinzu
         for (Map.Entry<String, List<Producer>> e : channelPublishes.entrySet()) {
             String topicNode = "topic:" + e.getKey();
             for (Producer p : e.getValue()) {
@@ -135,6 +135,7 @@ public class AsyncAPIParser {
         Consumer(String op, String msg, String ch) { this.operationId = op; this.message = msg; this.channel = ch; }
     }
 
+    //"#/components/messages/OrderCreated" -> "OrderCreated"
     private String extractMessageName(String messageRef) {
         if (messageRef == null || messageRef.isEmpty()) return null;
         int i = messageRef.lastIndexOf('/');

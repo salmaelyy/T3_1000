@@ -2,17 +2,19 @@ package com.example.asyncapigenerator;
 
 import org.junit.jupiter.api.Test;
 
-import java.net.URL;
-import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AsyncAPIParserTest {
 
     private String res(String name) {
-        URL u = getClass().getResource("/asyncapi/" + name);
+        var u = getClass().getResource("/asyncapi/" + name);
         assertNotNull(u, "Test-Resource fehlt: " + name);
-        return Paths.get(u.getPath()).toString();
+        try {
+            return java.nio.file.Path.of(u.toURI()).toString();
+        } catch (java.net.URISyntaxException e) {
+            throw new RuntimeException("Ungültige Resource-URI für " + name, e);
+        }
     }
 
     @Test
@@ -39,7 +41,7 @@ public class AsyncAPIParserTest {
     @Test
     void testSeparatedPublishAndSubscribe_sameMessageButDifferentChannels_createsOnlyBridgingFlows() throws Exception {
         // In dieser Datei gibt es publish in channelA und subscribe in channelB mit derselben Message.
-        // Deine Parser-Logik erzeugt KEINEN direkten Producer->Consumer Flow,
+        // die Parser-Logik erzeugt KEINEN direkten Producer->Consumer Flow,
         // ABER erzeugt Bridging-Flows via topic:channelA / topic:channelB.
         AsyncAPIParser p = new AsyncAPIParser();
         AsyncAPIData d = p.parseYaml(res("v2-separated-same-msg-different-channels.yaml"));
