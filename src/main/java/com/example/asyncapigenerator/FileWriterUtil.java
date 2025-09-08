@@ -26,10 +26,10 @@ public class FileWriterUtil {
         int participantCount = participants.size();
 
         String listItems = participants.stream()
-                .map(p -> "<li><code>" + esc(p) + "</code></li>")
-                .collect(Collectors.joining("\n"));
-
-        String template = """
+                .map(p -> "<li><code>" + esc(p) + "</code></li>") //<li><code>Teilnehmername</code></li>
+                .collect(Collectors.joining("\n")); //klebt sie mit "\n" (Zeilenumbruch) zusammen
+        //Liste mit allen Teilnehmern als Textblock
+        String template = """ 
             <h2>Metadaten</h2>
             <table>
               <tr><td class="muted">Title</td><td>%s</td></tr>
@@ -43,7 +43,7 @@ public class FileWriterUtil {
             %s
             </ul>
             """;
-        return String.format(template, title, version, description, flowCount, participantCount, listItems);
+        return String.format(template, title, version, description, flowCount, participantCount, listItems); //ersetzen das %s / %d
     }
 
     public void writeHtmlWithMermaidToggleWithMeta(String fileName, String shortCode, String fullCode, String metaHtml) throws Exception {
@@ -55,7 +55,13 @@ public class FileWriterUtil {
       <title>Mermaid Diagramm</title>
       <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        mermaid.initialize({ startOnLoad: true,
+        theme: "base",
+                        themeVariables: {
+                          primaryColor: "#fc9dc4",   // Standardkasten
+                          primaryTextColor: "#000",
+                          primaryBorderColor: "#333"
+                        }});
 
         window.addEventListener("DOMContentLoaded", () => {
           const toggle = document.getElementById("toggle");
@@ -90,7 +96,7 @@ public class FileWriterUtil {
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #4caf50; }
+        input:checked + .slider { background-color: #fc9dc4; }
         input:checked + .slider:before { transform: translateX(26px); }
         .label-text { font-size: 14px; margin: 0 14px 0 8px; vertical-align: middle; }
         .mermaid { visibility: hidden; position: absolute; font-size: 12px; line-height: 1.2; }
@@ -131,7 +137,11 @@ public class FileWriterUtil {
         writeToFile(fileName, html);
     }
     // ==== Hilfen ====
+
+    //wenn string null/leer dann - sonst original text
     private static String nullToDash(String s) { return (s == null || s.isBlank()) ? "—" : s; }
+
+    //„sichere“ Varianten, die der Browser als reines Zeichen anzeigt (könnt edie zeichen sonst falsch interpretieren
     private static String esc(String s) {
         return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;");
     }
