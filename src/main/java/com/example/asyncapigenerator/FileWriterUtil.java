@@ -54,7 +54,7 @@ public class FileWriterUtil {
       <meta charset="UTF-8" />
       <title>Mermaid Diagramm</title>
       <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; 
         mermaid.initialize({ startOnLoad: true,
         theme: "base",
                         themeVariables: {
@@ -63,7 +63,7 @@ public class FileWriterUtil {
                           primaryBorderColor: "#333"
                         }});
 
-        window.addEventListener("DOMContentLoaded", () => {
+        window.addEventListener("DOMContentLoaded", () => { 
           const toggle = document.getElementById("toggle");
           const metaToggle = document.getElementById("toggle-meta");
           const shortDiv = document.getElementById("diagram-short");

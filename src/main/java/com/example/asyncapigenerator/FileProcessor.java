@@ -10,7 +10,7 @@ public class FileProcessor {
     private final FileWriterUtil writer = new FileWriterUtil();
 
     public void processFolder(File folder) {
-        File[] files = folder.listFiles((dir, name) -> name.endsWith(".yaml") || name.endsWith(".yml"));
+        File[] files = folder.listFiles((__, name) -> name.endsWith(".yaml") || name.endsWith(".yml"));
         if (files == null || files.length == 0) { //==0, wenn leer; ==null, wenn kein verzeichnis ist
             System.out.println("Keine YAML-Dateien gefunden.");
             return;

@@ -39,7 +39,8 @@ public class AsyncAPIParser {
         List<Producer> producers = new ArrayList<>(); //alle prod
         List<Consumer> consumers = new ArrayList<>();
         Map<String, List<Producer>> channelPublishes = new LinkedHashMap<>(); //prod innerhalb des channels
-        Map<String, List<Consumer>> channelSubscribes = new LinkedHashMap<>(); //channel name und entsprechende cons
+        //Map<String, List<Consumer>> channelSubscribes = new LinkedHashMap<>(); //channel name und entsprechende cons
+        final var channelSubscribes = new LinkedHashMap<String, List<Consumer>>(); //channel name und entsprechende cons
 
 
         channels.fields().forEachRemaining(entry -> {

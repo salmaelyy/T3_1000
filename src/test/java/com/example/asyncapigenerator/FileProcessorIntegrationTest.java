@@ -3,7 +3,6 @@ package com.example.asyncapigenerator;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -11,21 +10,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class FileProcessorIntegrationTest {
 
-    private File copy(String name, Path dir) throws Exception {
-        URL u = getClass().getResource("/asyncapi/" + name);
-        assertNotNull(u, "missing resource: /asyncapi/" + name);
-        Path target = dir.resolve(name);
-        Files.copy(Path.of(u.toURI()), target);
-        return target.toFile();
-    }
-
     @Test
     void processesFolderAndCreatesOutputs() throws Exception {
-        Path tmp = Files.createTempDirectory("asyncapi-it");
-        Path asyncapi = Files.createDirectory(tmp.resolve("asyncapi"));
+        Path temp = Files.createTempDirectory("asyncapi-temp");
+        Path asyncapi = Files.createDirectory(temp.resolve("asyncapi"));
 
-        copy("v2-kafka.yaml", asyncapi);
-        copy("v3-ops-kafka.yaml", asyncapi);
+        // feste Pfade statt getResource
+        Path v2 = Path.of("src/test/resources/asyncapi/v2-kafka.yaml");
+        Path v3 = Path.of("src/test/resources/asyncapi/v3-ops-kafka.yaml");
+
+        Files.copy(v2, asyncapi.resolve("v2-kafka.yaml"));
+        Files.copy(v3, asyncapi.resolve("v3-ops-kafka.yaml"));
 
         // run
         FileProcessor fp = new FileProcessor();

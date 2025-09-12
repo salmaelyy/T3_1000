@@ -3,8 +3,11 @@ package com.example.asyncapigenerator;
 import java.io.File;
 
 public class Main {
+
+    final static String FOLDER_PATH = "asyncapi";
+
     public static void main(String[] args) {
-        String folderPath = "asyncapi";
+        final var folderPath = "asyncapi";
         File inputFolder = new File(folderPath);
 
         if (!inputFolder.isDirectory()) {

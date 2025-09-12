@@ -11,7 +11,7 @@ class AsyncAPIVersionTest {
 
     @Test
     void rejectVersion1x() {
-        AsyncAPIParser parser = new AsyncAPIParser(); // Top-Level Parser prüft die Version
+        AsyncAPIParser parser = new AsyncAPIParser();
         String invalidSpecPath = "src/test/resources/asyncapi/asyncapi-v1-example.yaml";
 
         Exception ex = assertThrows(Exception.class, () -> {
